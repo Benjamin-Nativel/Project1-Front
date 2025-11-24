@@ -3,6 +3,12 @@
  */
 export const routes = {
   HOME: '/',
+  LOGIN: '/connexion',
+  REGISTER: '/inscription',
+  INVENTORY: '/inventaire',
+  ADD_ITEM: '/ajouter-item',
+  RECIPES: '/recipes',
+  RECIPE_RESULT: '/resultat-recette',
   ABOUT: '/about',
   CONTACT: '/contact',
 }
