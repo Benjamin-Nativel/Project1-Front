@@ -1,26 +1,26 @@
 import { useState } from 'react'
-import { LoginForm } from '../../components'
+import { RegisterForm } from '../../components'
 
 /**
- * Page d'accueil
- * Composant principal de la page d'accueil
+ * Page d'inscription
+ * Composant principal de la page d'inscription
  */
-function Home() {
+function Register() {
   const [isLoading, setIsLoading] = useState(false)
 
-  const handleLogin = async (formData) => {
+  const handleRegister = async (formData) => {
     setIsLoading(true)
-    console.log('Tentative de connexion avec:', formData)
+    console.log('Tentative d\'inscription avec:', formData)
     
     // Simuler une requête API
     try {
       // TODO: Remplacer par un appel API réel
-      // const response = await api.login(formData)
+      // const response = await api.register(formData)
       await new Promise(resolve => setTimeout(resolve, 1500))
-      console.log('Connexion réussie')
+      console.log('Inscription réussie')
       // Redirection ou gestion de la session ici
     } catch (error) {
-      console.error('Erreur de connexion:', error)
+      console.error('Erreur d\'inscription:', error)
     } finally {
       setIsLoading(false)
     }
@@ -28,9 +28,10 @@ function Home() {
 
   return (
     <div className="w-full min-h-screen bg-background-light dark:bg-background-dark">
-      <LoginForm onSubmit={handleLogin} isLoading={isLoading} />
+      <RegisterForm onSubmit={handleRegister} isLoading={isLoading} />
     </div>
   )
 }
 
-export default Home
+export default Register
+
