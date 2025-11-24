@@ -1,0 +1,11 @@
+.home {
+  width: 100%;
+}
+
+.home__content {
+  text-align: center;
+}
+
+.home h2 {
+  margin-bottom: 2rem;
+}
