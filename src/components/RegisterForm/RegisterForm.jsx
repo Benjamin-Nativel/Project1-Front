@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
+import Logo from '../Logo'
 
 /**
  * Composant RegisterForm - Formulaire d'inscription (Mobile First)
@@ -123,13 +124,8 @@ function RegisterForm({ onSubmit, isLoading = false, error: apiError = null }) {
       <main className="flex-1 flex flex-col justify-center px-6 md:px-8 lg:px-12 pb-20 md:pb-24">
         {/* Header */}
         <div className="flex flex-col items-center text-center mb-12">
-          <div className="bg-primary/10 dark:bg-primary/20 rounded-2xl p-4 mb-4">
-            <span 
-              className="material-symbols-outlined text-primary text-5xl" 
-              style={{ fontVariationSettings: "'wght' 300, 'opsz' 48, 'FILL' 1" }}
-            >
-              kitchen
-            </span>
+          <div className="mb-4">
+            <Logo size="xl" />
           </div>
           <h1 className="text-3xl font-bold text-text-light dark:text-text-dark tracking-tight">
             Créer un compte

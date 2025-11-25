@@ -1,29 +1,78 @@
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
 
 /**
  * Composant InventoryContent - Contenu de la page d'inventaire (Mobile First)
  * @param {Object} props
  * @param {Array} props.items - Tableau d'items de l'inventaire
+ * @param {Array} props.categories - Tableau des catégories depuis l'API
  * @param {Function} props.onItemUpdate - Fonction appelée lors de la mise à jour d'un item
  * @param {Function} props.onAddItem - Fonction appelée pour ajouter un item
+ * @param {boolean} props.isLoading - État de chargement
+ * @param {boolean} props.isLoadingCategories - État de chargement des catégories
+ * @param {string} props.error - Message d'erreur
+ * @param {Function} props.onRetry - Fonction pour réessayer le chargement
  */
 function InventoryContent({ 
   items = [], 
+  categories = [],
   onItemUpdate,
-  onAddItem 
+  onAddItem,
+  isLoading = false,
+  isLoadingCategories = false,
+  error = null,
+  onRetry
 }) {
   const navigate = useNavigate()
   const [searchQuery, setSearchQuery] = useState('')
   const [selectedCategory, setSelectedCategory] = useState('Tout')
+  const [displayLimit, setDisplayLimit] = useState(12) // Afficher 12 items par défaut
+  const ITEMS_PER_PAGE = 12
 
-  const categories = ['Tout', 'Frais', 'Congelé', 'Épicerie']
+  // Préparer les catégories avec "Tout" en premier
+  const displayCategories = useMemo(() => {
+    const allCategories = [{ id: 0, name: 'Tout' }]
+    if (Array.isArray(categories) && categories.length > 0) {
+      // Ajouter les catégories de l'API
+      allCategories.push(...categories)
+    } else {
+      // Catégories par défaut si l'API n'a pas encore chargé
+      allCategories.push(
+        { id: 1, name: 'Frais' },
+        { id: 2, name: 'Congelé' },
+        { id: 3, name: 'Épicerie' }
+      )
+    }
+    return allCategories
+  }, [categories])
 
-  const filteredItems = items.filter(item => {
-    const matchesSearch = item.name.toLowerCase().includes(searchQuery.toLowerCase())
-    const matchesCategory = selectedCategory === 'Tout' || item.category === selectedCategory
-    return matchesSearch && matchesCategory
-  })
+  // Filtrer les items
+  const filteredItems = useMemo(() => {
+    return items.filter(item => {
+      const matchesSearch = item.name.toLowerCase().includes(searchQuery.toLowerCase())
+      const matchesCategory = selectedCategory === 'Tout' || item.category === selectedCategory
+      return matchesSearch && matchesCategory
+    })
+  }, [items, searchQuery, selectedCategory])
+
+  // Limiter l'affichage pour ne pas surcharger visuellement
+  const displayedItems = filteredItems.slice(0, displayLimit)
+  const hasMoreItems = filteredItems.length > displayLimit
+
+  const handleLoadMore = () => {
+    setDisplayLimit(prev => prev + ITEMS_PER_PAGE)
+  }
+
+  // Réinitialiser la limite d'affichage quand la recherche ou la catégorie change
+  const handleSearchChange = (value) => {
+    setSearchQuery(value)
+    setDisplayLimit(ITEMS_PER_PAGE)
+  }
+
+  const handleCategoryChange = (category) => {
+    setSelectedCategory(category)
+    setDisplayLimit(ITEMS_PER_PAGE)
+  }
 
   const handleQuantityChange = (itemId, change) => {
     const item = items.find(i => i.id === itemId)
@@ -40,7 +89,7 @@ function InventoryContent({
         <div className="flex flex-col gap-3 p-4 md:p-6 lg:p-4 lg:pl-6 xl:pl-8 pb-3">
           <div className="flex items-center justify-between gap-4">
             <p className="text-text-light dark:text-text-dark tracking-light text-[28px] md:text-3xl lg:text-4xl font-bold leading-tight">
-              My Inventory
+              Mes Ingrédients
             </p>
             {/* Floating Action Button - Desktop only */}
             <button
@@ -70,7 +119,7 @@ function InventoryContent({
                 className="form-input flex w-full min-w-0 flex-1 resize-none overflow-hidden rounded-r-xl text-text-light dark:text-text-dark focus:outline-0 focus:ring-2 focus:ring-primary/50 border-none bg-surface-light dark:bg-surface-dark h-full placeholder:text-text-secondary-light dark:placeholder:text-text-secondary-dark px-4 pl-2 text-base font-normal leading-normal"
                 placeholder="Rechercher des bananes, du lait, ..."
                 value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
+                onChange={(e) => handleSearchChange(e.target.value)}
               />
             </div>
           </label>
@@ -78,47 +127,95 @@ function InventoryContent({
 
         {/* Chips */}
         <div className="flex gap-3 px-4 md:px-6 lg:px-0 lg:pl-6 xl:pl-8 pb-4 overflow-x-auto">
-          {categories.map((category) => (
-            <button
-              key={category}
-              onClick={() => setSelectedCategory(category)}
-              className={`flex h-10 shrink-0 items-center justify-center gap-x-2 rounded-xl pl-4 pr-4 cursor-pointer transition-colors ${
-                selectedCategory === category
-                  ? 'bg-primary'
-                  : 'bg-surface-light dark:bg-surface-dark shadow-soft dark:shadow-none'
-              }`}
-            >
-              <p
-                className={`text-sm font-medium leading-normal ${
-                  selectedCategory === category
-                    ? 'text-white'
-                    : 'text-text-light dark:text-text-dark'
-                }`}
+          {displayCategories.map((category) => {
+            const categoryName = typeof category === 'string' ? category : category.name
+            const categoryId = typeof category === 'object' ? category.id : category
+            
+            return (
+              <button
+                key={categoryId}
+                onClick={() => handleCategoryChange(categoryName)}
+                disabled={isLoadingCategories}
+                className={`flex h-10 shrink-0 items-center justify-center gap-x-2 rounded-xl pl-4 pr-4 cursor-pointer transition-colors ${
+                  selectedCategory === categoryName
+                    ? 'bg-primary'
+                    : 'bg-surface-light dark:bg-surface-dark shadow-soft dark:shadow-none'
+                } ${isLoadingCategories ? 'opacity-50 cursor-not-allowed' : ''}`}
               >
-                {category}
-              </p>
-            </button>
-          ))}
+                <p
+                  className={`text-sm font-medium leading-normal ${
+                    selectedCategory === categoryName
+                      ? 'text-white'
+                      : 'text-text-light dark:text-text-dark'
+                  }`}
+                >
+                  {categoryName}
+                </p>
+              </button>
+            )
+          })}
         </div>
       </header>
 
       {/* Main Content: Item List */}
-      <main className="flex-1 px-4 md:px-6 lg:px-0 lg:pl-6 xl:pl-8 py-2 md:py-4 lg:py-6 space-y-3 md:space-y-4 pb-28 md:pb-32">
-        {filteredItems.length === 0 ? (
+      <main className="flex-1 px-4 md:px-6 lg:px-0 lg:pl-6 xl:pl-8 py-2 md:py-4 lg:py-6 space-y-3 md:space-y-4 pb-24 md:pb-32">
+        {/* État de chargement */}
+        {isLoading && items.length === 0 && (
+          <div className="flex flex-col items-center justify-center text-center py-16 px-4">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mb-4"></div>
+            <p className="text-text-secondary-light dark:text-text-secondary-dark">
+              Chargement de l'inventaire...
+            </p>
+          </div>
+        )}
+
+        {/* Message d'erreur */}
+        {error && !isLoading && (
+          <div className="flex flex-col items-center justify-center text-center py-16 px-4">
+            <span className="material-symbols-outlined text-6xl text-destructive mb-4">
+              error
+            </span>
+            <p className="text-lg font-bold text-text-light dark:text-text-dark mb-2">
+              Erreur de chargement
+            </p>
+            <p className="text-text-secondary-light dark:text-text-secondary-dark mb-4">
+              {error}
+            </p>
+            {onRetry && (
+              <button
+                onClick={onRetry}
+                className="px-6 py-3 rounded-xl bg-primary text-white font-medium hover:opacity-90 transition-opacity"
+              >
+                Réessayer
+              </button>
+            )}
+          </div>
+        )}
+
+        {/* Liste vide */}
+        {!isLoading && !error && filteredItems.length === 0 && (
           <div className="flex flex-col items-center justify-center text-center py-16 px-4">
             <span className="material-symbols-outlined text-6xl text-text-secondary-light dark:text-text-secondary-dark mb-4">
               inventory_2
             </span>
             <p className="text-lg font-bold text-text-light dark:text-text-dark">
-              Votre inventaire est vide
+              {searchQuery || selectedCategory !== 'Tout' 
+                ? 'Aucun résultat trouvé' 
+                : 'Votre inventaire est vide'}
             </p>
             <p className="text-text-secondary-light dark:text-text-secondary-dark mt-1">
-              Appuyez sur le bouton '+' pour ajouter votre premier article !
+              {searchQuery || selectedCategory !== 'Tout'
+                ? 'Essayez de modifier vos critères de recherche'
+                : 'Appuyez sur le bouton \'+\' pour ajouter votre premier article !'}
             </p>
           </div>
-        ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 md:gap-4 lg:gap-6">
-            {filteredItems.map((item) => (
+        )}
+
+        {/* Liste d'items */}
+        {!isLoading && !error && displayedItems.length > 0 && (
+          <>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 md:gap-4 lg:gap-6">
+              {displayedItems.map((item) => (
               <div
                 key={item.id}
                 className="flex items-center gap-4 bg-surface-light dark:bg-surface-dark p-4 md:p-5 lg:p-6 min-h-[72px] md:min-h-[80px] justify-between rounded-xl shadow-soft dark:shadow-none"
@@ -154,8 +251,21 @@ function InventoryContent({
                 </button>
               </div>
               </div>
-            ))}
-          </div>
+              ))}
+            </div>
+            
+            {/* Bouton "Charger plus" si il y a plus d'items */}
+            {hasMoreItems && (
+              <div className="flex justify-center mt-6">
+                <button
+                  onClick={handleLoadMore}
+                  className="px-6 py-3 rounded-xl bg-surface-light dark:bg-surface-dark text-text-light dark:text-text-dark font-medium shadow-soft dark:shadow-none hover:opacity-90 transition-opacity"
+                >
+                  Charger plus ({filteredItems.length - displayLimit} restants)
+                </button>
+              </div>
+            )}
+          </>
         )}
       </main>
 
@@ -165,7 +275,7 @@ function InventoryContent({
           onAddItem?.()
           navigate('/ajouter-item')
         }}
-        className="fixed lg:hidden bottom-24 right-4 md:bottom-6 md:right-6 z-40 flex h-16 w-16 md:h-20 md:w-20 items-center justify-center rounded-2xl bg-primary text-white shadow-fab cursor-pointer hover:opacity-90 transition-opacity"
+        className="fixed lg:hidden bottom-28 right-4 md:bottom-6 md:right-6 z-[90] flex h-16 w-16 md:h-20 md:w-20 items-center justify-center rounded-2xl bg-primary text-white shadow-fab cursor-pointer hover:opacity-90 transition-opacity"
       >
         <span
           className="material-symbols-outlined text-4xl"

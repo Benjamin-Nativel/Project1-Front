@@ -6,6 +6,8 @@ import Inventory from './pages/Inventory'
 import Recipes from './pages/Recipes'
 import AddItem from './pages/AddItem'
 import RecipeResultPage from './pages/RecipeResult'
+import ProtectedRoute from './components/ProtectedRoute'
+import PublicRoute from './components/PublicRoute'
 
 /**
  * Composant racine de l'application
@@ -15,19 +17,67 @@ function App() {
   return (
     <Router>
       <Routes>
-        {/* Page de connexion sans layout */}
-        <Route path="/connexion" element={<Home />} />
-        <Route path="/" element={<Home />} />
-        {/* Page d'inscription sans layout */}
-        <Route path="/inscription" element={<Register />} />
-        {/* Page d'inventaire */}
-        <Route path="/inventaire" element={<Inventory />} />
-        {/* Page d'ajout d'item */}
-        <Route path="/ajouter-item" element={<AddItem />} />
-        {/* Page de recettes */}
-        <Route path="/recipes" element={<Recipes />} />
-        {/* Page de résultat de recette */}
-        <Route path="/resultat-recette" element={<RecipeResultPage />} />
+        {/* Routes publiques - accessibles sans authentification : login (/) et inscription uniquement */}
+        <Route
+          path="/"
+          element={
+            <PublicRoute>
+              <Home />
+            </PublicRoute>
+          }
+        />
+        {/* Alias pour la route de connexion */}
+        <Route
+          path="/connexion"
+          element={
+            <PublicRoute>
+              <Home />
+            </PublicRoute>
+          }
+        />
+        <Route
+          path="/inscription"
+          element={
+            <PublicRoute>
+              <Register />
+            </PublicRoute>
+          }
+        />
+        
+        {/* Routes protégées - nécessitent une authentification */}
+        <Route
+          path="/inventaire"
+          element={
+            <ProtectedRoute>
+              <Inventory />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/ajouter-item"
+          element={
+            <ProtectedRoute>
+              <AddItem />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/recipes"
+          element={
+            <ProtectedRoute>
+              <Recipes />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/resultat-recette"
+          element={
+            <ProtectedRoute>
+              <RecipeResultPage />
+            </ProtectedRoute>
+          }
+        />
+        
         {/* Autres pages avec layout */}
         {/* <Route path="/dashboard" element={<MainLayout><Dashboard /></MainLayout>} /> */}
       </Routes>
