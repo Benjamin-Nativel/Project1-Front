@@ -1,5 +1,8 @@
 import { useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { RegisterForm } from '../../components'
+import { authService } from '../../services/api'
+import { formatErrorMessage } from '../../utils/errors'
 
 /**
  * Page d'inscription
@@ -7,20 +10,28 @@ import { RegisterForm } from '../../components'
  */
 function Register() {
   const [isLoading, setIsLoading] = useState(false)
+  const [error, setError] = useState(null)
+  const navigate = useNavigate()
 
   const handleRegister = async (formData) => {
     setIsLoading(true)
-    console.log('Tentative d\'inscription avec:', formData)
+    setError(null)
     
-    // Simuler une requête API
     try {
-      // TODO: Remplacer par un appel API réel
-      // const response = await api.register(formData)
-      await new Promise(resolve => setTimeout(resolve, 1500))
-      console.log('Inscription réussie')
-      // Redirection ou gestion de la session ici
+      const response = await authService.register(formData)
+      console.log('Inscription réussie:', response)
+      
+      // Rediriger vers la page de connexion après inscription réussie
+      // L'utilisateur devra se connecter avec ses identifiants
+      navigate('/connexion', { 
+        state: { 
+          message: 'Compte créé avec succès ! Vous pouvez maintenant vous connecter.' 
+        } 
+      })
     } catch (error) {
       console.error('Erreur d\'inscription:', error)
+      const errorMessage = formatErrorMessage(error)
+      setError(errorMessage)
     } finally {
       setIsLoading(false)
     }
@@ -28,7 +39,7 @@ function Register() {
 
   return (
     <div className="w-full min-h-screen bg-background-light dark:bg-background-dark">
-      <RegisterForm onSubmit={handleRegister} isLoading={isLoading} />
+      <RegisterForm onSubmit={handleRegister} isLoading={isLoading} error={error} />
     </div>
   )
 }

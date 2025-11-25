@@ -1,5 +1,8 @@
 import { useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { LoginForm } from '../../components'
+import { authService } from '../../services/api'
+import { formatErrorMessage } from '../../utils/errors'
 
 /**
  * Page d'accueil
@@ -7,20 +10,23 @@ import { LoginForm } from '../../components'
  */
 function Home() {
   const [isLoading, setIsLoading] = useState(false)
+  const [error, setError] = useState(null)
+  const navigate = useNavigate()
 
   const handleLogin = async (formData) => {
     setIsLoading(true)
-    console.log('Tentative de connexion avec:', formData)
+    setError(null)
     
-    // Simuler une requête API
     try {
-      // TODO: Remplacer par un appel API réel
-      // const response = await api.login(formData)
-      await new Promise(resolve => setTimeout(resolve, 1500))
-      console.log('Connexion réussie')
-      // Redirection ou gestion de la session ici
+      const response = await authService.login(formData)
+      console.log('Connexion réussie:', response)
+      
+      // Rediriger vers la page d'inventaire ou dashboard après connexion
+      navigate('/inventaire')
     } catch (error) {
       console.error('Erreur de connexion:', error)
+      const errorMessage = formatErrorMessage(error)
+      setError(errorMessage)
     } finally {
       setIsLoading(false)
     }
@@ -28,7 +34,7 @@ function Home() {
 
   return (
     <div className="w-full min-h-screen bg-background-light dark:bg-background-dark">
-      <LoginForm onSubmit={handleLogin} isLoading={isLoading} />
+      <LoginForm onSubmit={handleLogin} isLoading={isLoading} error={error} />
     </div>
   )
 }

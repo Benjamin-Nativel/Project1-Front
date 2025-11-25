@@ -6,14 +6,17 @@ import { Link } from 'react-router-dom'
  * @param {Object} props
  * @param {Function} props.onSubmit - Fonction appelée lors de la soumission du formulaire
  * @param {boolean} props.isLoading - État de chargement
+ * @param {string} props.error - Message d'erreur à afficher
  */
-function LoginForm({ onSubmit, isLoading = false }) {
+function LoginForm({ onSubmit, isLoading = false, error: apiError = null }) {
   const [formData, setFormData] = useState({
     email: '',
     password: ''
   })
   const [errors, setErrors] = useState({})
   const [focusedField, setFocusedField] = useState(null)
+  const [touched, setTouched] = useState({})
+  const [hasSubmitted, setHasSubmitted] = useState(false)
 
   const handleChange = (e) => {
     const { name, value } = e.target
@@ -21,13 +24,50 @@ function LoginForm({ onSubmit, isLoading = false }) {
       ...prev,
       [name]: value
     }))
-    // Effacer l'erreur du champ modifié
-    if (errors[name]) {
+    // Effacer l'erreur du champ modifié seulement s'il a été touché
+    if (errors[name] && touched[name]) {
       setErrors(prev => ({
         ...prev,
         [name]: ''
       }))
     }
+  }
+
+  const handleBlur = (e) => {
+    const { name } = e.target
+    setFocusedField(null)
+    setTouched(prev => ({ ...prev, [name]: true }))
+    
+    // Valider le champ seulement après qu'il ait été touché
+    if (hasSubmitted || touched[name]) {
+      validateField(name, formData[name])
+    }
+  }
+
+  const validateField = (name, value) => {
+    const newErrors = { ...errors }
+    
+    if (name === 'email') {
+      if (!value) {
+        newErrors.email = 'L\'email est requis'
+      } else if (!/\S+@\S+\.\S+/.test(value)) {
+        newErrors.email = 'L\'email n\'est pas valide'
+      } else {
+        delete newErrors.email
+      }
+    }
+    
+    if (name === 'password') {
+      if (!value) {
+        newErrors.password = 'Le mot de passe est requis'
+      } else if (value.length < 6) {
+        newErrors.password = 'Le mot de passe doit contenir au moins 6 caractères'
+      } else {
+        delete newErrors.password
+      }
+    }
+    
+    setErrors(newErrors)
   }
 
   const validate = () => {
@@ -51,6 +91,10 @@ function LoginForm({ onSubmit, isLoading = false }) {
 
   const handleSubmit = (e) => {
     e.preventDefault()
+    setHasSubmitted(true)
+    
+    // Marquer tous les champs comme touchés
+    setTouched({ email: true, password: true })
     
     if (validate()) {
       onSubmit?.(formData)
@@ -79,7 +123,19 @@ function LoginForm({ onSubmit, isLoading = false }) {
         </div>
 
         {/* Form */}
-        <form onSubmit={handleSubmit} className="w-full space-y-5">
+        <form onSubmit={handleSubmit} className="w-full space-y-5" noValidate>
+          {/* Error Message */}
+          {apiError && (
+            <div className="w-full animate-[fadeIn_0.3s_ease-in-out]">
+              <div className="p-4 rounded-xl bg-red-50 dark:bg-red-900/20 border-2 border-red-200 dark:border-red-800 text-red-800 dark:text-red-300 text-sm shadow-sm">
+                <div className="flex items-start gap-3">
+                  <span className="material-symbols-outlined text-xl flex-shrink-0 mt-0.5">error</span>
+                  <span className="leading-relaxed flex-1">{apiError}</span>
+                </div>
+              </div>
+            </div>
+          )}
+          
           {/* Email Field */}
           <label className="flex flex-col min-w-40 w-full">
             <span className="text-sm font-medium text-text-secondary-light dark:text-text-secondary-dark mb-1.5 ml-1">
@@ -105,14 +161,22 @@ function LoginForm({ onSubmit, isLoading = false }) {
                 value={formData.email}
                 onChange={handleChange}
                 onFocus={() => setFocusedField('email')}
-                onBlur={() => setFocusedField(null)}
+                onBlur={handleBlur}
                 placeholder="votre@email.com"
                 disabled={isLoading}
                 autoComplete="email"
+                noValidate
               />
             </div>
-            {errors.email && (
-              <span className="text-sm text-destructive mt-1 ml-1">{errors.email}</span>
+            {errors.email && touched.email && (
+              <div className="mt-2 animate-[fadeIn_0.2s_ease-in-out]">
+                <div className="relative inline-flex items-start gap-2 px-3 py-2 rounded-lg bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 text-amber-800 dark:text-amber-300 text-sm shadow-sm">
+                  <span className="material-symbols-outlined text-base flex-shrink-0">error</span>
+                  <span className="leading-relaxed">{errors.email}</span>
+                  {/* Flèche pointant vers le champ */}
+                  <div className="absolute -top-1.5 left-4 w-3 h-3 rotate-45 bg-amber-50 dark:bg-amber-900/20 border-l border-t border-amber-200 dark:border-amber-800"></div>
+                </div>
+              </div>
             )}
           </label>
 
@@ -141,14 +205,22 @@ function LoginForm({ onSubmit, isLoading = false }) {
                 value={formData.password}
                 onChange={handleChange}
                 onFocus={() => setFocusedField('password')}
-                onBlur={() => setFocusedField(null)}
+                onBlur={handleBlur}
                 placeholder="Entrez votre mot de passe"
                 disabled={isLoading}
                 autoComplete="current-password"
+                noValidate
               />
             </div>
-            {errors.password && (
-              <span className="text-sm text-destructive mt-1 ml-1">{errors.password}</span>
+            {errors.password && touched.password && (
+              <div className="mt-2 animate-[fadeIn_0.2s_ease-in-out]">
+                <div className="relative inline-flex items-start gap-2 px-3 py-2 rounded-lg bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 text-amber-800 dark:text-amber-300 text-sm shadow-sm">
+                  <span className="material-symbols-outlined text-base flex-shrink-0">error</span>
+                  <span className="leading-relaxed">{errors.password}</span>
+                  {/* Flèche pointant vers le champ */}
+                  <div className="absolute -top-1.5 left-4 w-3 h-3 rotate-45 bg-amber-50 dark:bg-amber-900/20 border-l border-t border-amber-200 dark:border-amber-800"></div>
+                </div>
+              </div>
             )}
           </label>
 
