@@ -10,24 +10,24 @@ import PageHeader from '../PageHeader'
  */
 function RecipePrompt({ onSubmit, isLoading = false }) {
   const navigate = useNavigate()
-  const [ingredients, setIngredients] = useState('')
+  const [prompt, setPrompt] = useState('')
   const [focusedField, setFocusedField] = useState(null)
   const [errors, setErrors] = useState({})
 
   const handleChange = (e) => {
     const value = e.target.value
-    setIngredients(value)
+    setPrompt(value)
     // Effacer l'erreur si le champ est modifié
-    if (errors.ingredients) {
-      setErrors(prev => ({ ...prev, ingredients: '' }))
+    if (errors.prompt) {
+      setErrors(prev => ({ ...prev, prompt: '' }))
     }
   }
 
   const validate = () => {
     const newErrors = {}
 
-    if (!ingredients.trim()) {
-      newErrors.ingredients = 'Veuillez entrer au moins un ingrédient'
+    if (!prompt.trim()) {
+      newErrors.prompt = 'Veuillez entrer votre demande'
     }
 
     setErrors(newErrors)
@@ -38,7 +38,7 @@ function RecipePrompt({ onSubmit, isLoading = false }) {
     e.preventDefault()
     
     if (validate()) {
-      onSubmit?.(ingredients.trim())
+      onSubmit?.(prompt.trim())
     }
   }
 
@@ -58,7 +58,7 @@ function RecipePrompt({ onSubmit, isLoading = false }) {
             Que voulez-vous cuisiner ?
           </h1>
           <p className="text-text-secondary-light dark:text-text-secondary-dark mt-2 md:mt-3 text-base md:text-lg">
-            Dites-nous quels ingrédients vous avez, et nous vous suggérerons une recette.
+            Dites-nous ce que vous souhaitez préparer avec vos ingrédients disponibles.
           </p>
         </div>
 
@@ -70,28 +70,31 @@ function RecipePrompt({ onSubmit, isLoading = false }) {
                 htmlFor="recipe-prompt"
                 className="block text-sm font-medium text-text-secondary-light dark:text-text-secondary-dark mb-2"
               >
-                Ingrédients
+                Votre demande
               </label>
               <textarea
                 id="recipe-prompt"
-                name="ingredients"
+                name="prompt"
                 className={`form-textarea w-full rounded-xl border-2 transition-colors bg-surface-light dark:bg-surface-dark text-text-light dark:text-text-dark focus:outline-0 focus:ring-2 focus:ring-primary/50 min-h-28 md:min-h-32 lg:min-h-36 resize-none ${
-                  errors.ingredients
+                  errors.prompt
                     ? 'border-destructive'
-                    : focusedField === 'ingredients'
+                    : focusedField === 'prompt'
                       ? 'border-primary'
                       : 'border-slate-300 dark:border-slate-600'
                 }`}
-                placeholder="ex: poitrine de poulet, riz, brocoli..."
-                value={ingredients}
+                placeholder="ex: Donne-moi une recette simple et rapide, Je veux un dessert, Recette végétarienne..."
+                value={prompt}
                 onChange={handleChange}
-                onFocus={() => setFocusedField('ingredients')}
+                onFocus={() => setFocusedField('prompt')}
                 onBlur={() => setFocusedField(null)}
                 disabled={isLoading}
               />
-              {errors.ingredients && (
-                <span className="text-sm text-destructive mt-1 block">{errors.ingredients}</span>
+              {errors.prompt && (
+                <span className="text-sm text-destructive mt-1 block">{errors.prompt}</span>
               )}
+              <p className="text-xs text-text-secondary-light dark:text-text-secondary-dark mt-2">
+                💡 La recette sera générée automatiquement à partir de vos ingrédients disponibles dans l'inventaire.
+              </p>
             </div>
           </div>
         </div>

@@ -5,14 +5,16 @@ import axiosInstance from '../axios'
  */
 export const recipesService = {
   /**
-   * Générer une recette à partir d'ingrédients
-   * @param {string} ingredients - Liste des ingrédients (texte libre)
-   * @returns {Promise<Object>} - Recette générée
+   * Générer une recette à partir d'un prompt et de l'inventaire disponible
+   * @param {string} prompt - La demande de l'utilisateur pour la recette (ex: "Donne-moi une recette simple", "Je veux un dessert")
+   * @returns {Promise<Object>} - Recette générée avec { recipe_name, matching_score, preparation_time_minutes, ingredients, steps }
    */
-  generateRecipe: async (ingredients) => {
+  generateRecipe: async (prompt) => {
     try {
-      const response = await axiosInstance.post('/recipes/generate', {
-        ingredients,
+      const response = await axiosInstance.post('/api/generate_recipes', {
+        prompt,
+      }, {
+        timeout: 60000, // 1 minute (60 secondes) - nécessaire car l'appel à Gemini peut prendre du temps
       })
       return response.data
     } catch (error) {
