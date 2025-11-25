@@ -1,14 +1,10 @@
 import { useState, useEffect } from 'react'
 import { useLocation } from 'react-router-dom'
 import { BottomNavigation, InventoryContent, FlashMessage } from '../../components'
-import { inventoryService, categoriesService } from '../../services/api'
+import { inventoryService } from '../../services/api'
 import { formatErrorMessage } from '../../utils/errors'
-import { 
-  getInventoryCache, 
-  setInventoryCache, 
-  getCategoriesCache, 
-  setCategoriesCache 
-} from '../../utils/storage'
+import { getInventoryCache, setInventoryCache } from '../../utils/storage'
+import { useCategories } from '../../hooks'
 
 /**
  * Page d'inventaire
@@ -16,12 +12,11 @@ import {
  */
 function Inventory() {
   const [items, setItems] = useState([])
-  const [categories, setCategories] = useState([])
   const [isLoading, setIsLoading] = useState(true)
-  const [isLoadingCategories, setIsLoadingCategories] = useState(true)
   const [error, setError] = useState(null)
   const [flashMessage, setFlashMessage] = useState(null)
   const location = useLocation()
+  const { categories, isLoading: isLoadingCategories } = useCategories()
 
   // Récupérer le message flash depuis le state de navigation
   useEffect(() => {
@@ -38,7 +33,6 @@ function Inventory() {
   // Charger les données au montage du composant
   useEffect(() => {
     loadInventory()
-    loadCategories()
   }, [])
 
   const loadInventory = async () => {
@@ -68,37 +62,6 @@ function Inventory() {
     }
   }
 
-  const loadCategories = async () => {
-    // Vérifier le cache localStorage d'abord
-    const cachedCategories = getCategoriesCache()
-    if (cachedCategories) {
-      setCategories(cachedCategories)
-      setIsLoadingCategories(false)
-      return
-    }
-
-    try {
-      setIsLoadingCategories(true)
-      
-      const data = await categoriesService.getCategories()
-      
-      // Mettre à jour le cache localStorage
-      setCategoriesCache(data)
-      
-      setCategories(data)
-    } catch (error) {
-      // En cas d'erreur, utiliser des catégories par défaut
-      const defaultCategories = [
-        { id: 0, name: 'Tout' },
-        { id: 1, name: 'Frais' },
-        { id: 2, name: 'Congelé' },
-        { id: 3, name: 'Épicerie' }
-      ]
-      setCategories(defaultCategories)
-    } finally {
-      setIsLoadingCategories(false)
-    }
-  }
 
   const handleItemUpdate = async (itemId, updatedItem) => {
     const oldItem = items.find(item => item.id === itemId)
