@@ -1,6 +1,6 @@
-import { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
-import { LoginForm } from '../../components'
+import { useState, useEffect } from 'react'
+import { useNavigate, useLocation } from 'react-router-dom'
+import { LoginForm, FlashMessage } from '../../components'
 import { authService } from '../../services/api'
 import { formatErrorMessage } from '../../utils/errors'
 
@@ -11,20 +11,43 @@ import { formatErrorMessage } from '../../utils/errors'
 function Home() {
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState(null)
+  const [flashMessage, setFlashMessage] = useState(null)
   const navigate = useNavigate()
+  const location = useLocation()
+
+  // Récupérer le message flash depuis le state de navigation
+  useEffect(() => {
+    if (location.state?.message) {
+      setFlashMessage({
+        message: location.state.message,
+        type: 'success'
+      })
+      // Nettoyer le state pour éviter de réafficher le message au rechargement
+      window.history.replaceState({}, document.title)
+    }
+  }, [location])
 
   const handleLogin = async (formData) => {
     setIsLoading(true)
     setError(null)
+    setFlashMessage(null)
     
     try {
-      const response = await authService.login(formData)
-      console.log('Connexion réussie:', response)
+      await authService.login(formData)
       
-      // Rediriger vers la page d'inventaire ou dashboard après connexion
-      navigate('/inventaire')
+      // Afficher le message de succès
+      setFlashMessage({
+        message: 'Connexion réussie ! Redirection en cours...',
+        type: 'success'
+      })
+      
+      // Rediriger vers la page d'inventaire après un court délai pour voir le message
+      setTimeout(() => {
+        navigate('/inventaire', {
+          state: { message: 'Bienvenue ! Vous êtes maintenant connecté.' }
+        })
+      }, 500)
     } catch (error) {
-      console.error('Erreur de connexion:', error)
       const errorMessage = formatErrorMessage(error)
       setError(errorMessage)
     } finally {
@@ -34,6 +57,13 @@ function Home() {
 
   return (
     <div className="w-full min-h-screen bg-background-light dark:bg-background-dark">
+      {flashMessage && (
+        <FlashMessage
+          message={flashMessage.message}
+          type={flashMessage.type}
+          onClose={() => setFlashMessage(null)}
+        />
+      )}
       <LoginForm onSubmit={handleLogin} isLoading={isLoading} error={error} />
     </div>
   )

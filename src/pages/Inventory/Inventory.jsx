@@ -1,17 +1,14 @@
 import { useState, useEffect } from 'react'
-import { BottomNavigation, InventoryContent } from '../../components'
+import { useLocation } from 'react-router-dom'
+import { BottomNavigation, InventoryContent, FlashMessage } from '../../components'
 import { inventoryService, categoriesService } from '../../services/api'
 import { formatErrorMessage } from '../../utils/errors'
-
-// Cache simple en mémoire pour les données de l'inventaire
-let inventoryCache = null
-let cacheTimestamp = null
-const CACHE_DURATION = 5 * 60 * 1000 // 5 minutes
-
-// Cache pour les catégories
-let categoriesCache = null
-let categoriesCacheTimestamp = null
-const CATEGORIES_CACHE_DURATION = 10 * 60 * 1000 // 10 minutes (catégories changent moins souvent)
+import { 
+  getInventoryCache, 
+  setInventoryCache, 
+  getCategoriesCache, 
+  setCategoriesCache 
+} from '../../utils/storage'
 
 /**
  * Page d'inventaire
@@ -23,6 +20,20 @@ function Inventory() {
   const [isLoading, setIsLoading] = useState(true)
   const [isLoadingCategories, setIsLoadingCategories] = useState(true)
   const [error, setError] = useState(null)
+  const [flashMessage, setFlashMessage] = useState(null)
+  const location = useLocation()
+
+  // Récupérer le message flash depuis le state de navigation
+  useEffect(() => {
+    if (location.state?.message) {
+      setFlashMessage({
+        message: location.state.message,
+        type: 'success'
+      })
+      // Nettoyer le state pour éviter de réafficher le message au rechargement
+      window.history.replaceState({}, document.title)
+    }
+  }, [location])
 
   // Charger les données au montage du composant
   useEffect(() => {
@@ -31,10 +42,10 @@ function Inventory() {
   }, [])
 
   const loadInventory = async () => {
-    // Vérifier le cache d'abord
-    const now = Date.now()
-    if (inventoryCache && cacheTimestamp && (now - cacheTimestamp) < CACHE_DURATION) {
-      setItems(inventoryCache)
+    // Vérifier le cache localStorage d'abord
+    const cachedData = getInventoryCache()
+    if (cachedData) {
+      setItems(cachedData)
       setIsLoading(false)
       return
     }
@@ -45,9 +56,8 @@ function Inventory() {
       
       const data = await inventoryService.getItems()
       
-      // Mettre à jour le cache
-      inventoryCache = data
-      cacheTimestamp = now
+      // Mettre à jour le cache localStorage
+      setInventoryCache(data)
       
       setItems(data)
     } catch (error) {
@@ -59,10 +69,10 @@ function Inventory() {
   }
 
   const loadCategories = async () => {
-    // Vérifier le cache d'abord
-    const now = Date.now()
-    if (categoriesCache && categoriesCacheTimestamp && (now - categoriesCacheTimestamp) < CATEGORIES_CACHE_DURATION) {
-      setCategories(categoriesCache)
+    // Vérifier le cache localStorage d'abord
+    const cachedCategories = getCategoriesCache()
+    if (cachedCategories) {
+      setCategories(cachedCategories)
       setIsLoadingCategories(false)
       return
     }
@@ -72,9 +82,8 @@ function Inventory() {
       
       const data = await categoriesService.getCategories()
       
-      // Mettre à jour le cache
-      categoriesCache = data
-      categoriesCacheTimestamp = now
+      // Mettre à jour le cache localStorage
+      setCategoriesCache(data)
       
       setCategories(data)
     } catch (error) {
@@ -103,9 +112,8 @@ function Inventory() {
     )
     setItems(updatedItems)
     
-    // Mettre à jour le cache
-    inventoryCache = updatedItems
-    cacheTimestamp = Date.now()
+    // Mettre à jour le cache localStorage
+    setInventoryCache(updatedItems)
 
     // Mettre à jour sur le serveur
     try {
@@ -131,11 +139,10 @@ function Inventory() {
       // Ajouter l'item via l'API
       const createdItem = await inventoryService.addItem(newItem)
       
-      // Mettre à jour l'état local et le cache
+      // Mettre à jour l'état local et le cache localStorage
       const updatedItems = [...items, createdItem]
       setItems(updatedItems)
-      inventoryCache = updatedItems
-      cacheTimestamp = Date.now()
+      setInventoryCache(updatedItems)
     } catch (error) {
       // Recharger les données en cas d'erreur
       loadInventory()
@@ -144,6 +151,13 @@ function Inventory() {
 
   return (
     <div className="w-full min-h-screen bg-background-light dark:bg-background-dark flex md:flex-row relative overflow-x-hidden">
+      {flashMessage && (
+        <FlashMessage
+          message={flashMessage.message}
+          type={flashMessage.type}
+          onClose={() => setFlashMessage(null)}
+        />
+      )}
       <BottomNavigation />
       <div className="flex-1 md:ml-20 lg:ml-24 overflow-x-hidden">
         <InventoryContent

@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { RegisterForm } from '../../components'
+import { RegisterForm, FlashMessage } from '../../components'
 import { authService } from '../../services/api'
 import { formatErrorMessage } from '../../utils/errors'
 
@@ -11,6 +11,7 @@ import { formatErrorMessage } from '../../utils/errors'
 function Register() {
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState(null)
+  const [flashMessage, setFlashMessage] = useState(null)
   const navigate = useNavigate()
 
   const handleRegister = async (formData) => {
@@ -18,18 +19,23 @@ function Register() {
     setError(null)
     
     try {
-      const response = await authService.register(formData)
-      console.log('Inscription réussie:', response)
+      await authService.register(formData)
       
-      // Rediriger vers la page de connexion après inscription réussie
-      // L'utilisateur devra se connecter avec ses identifiants
-      navigate('/connexion', { 
-        state: { 
-          message: 'Compte créé avec succès ! Vous pouvez maintenant vous connecter.' 
-        } 
+      // Afficher le message de succès
+      setFlashMessage({
+        message: 'Compte créé avec succès ! Redirection...',
+        type: 'success'
       })
+      
+      // Rediriger vers la page de connexion après un court délai
+      setTimeout(() => {
+        navigate('/connexion', { 
+          state: { 
+            message: 'Compte créé avec succès ! Vous pouvez maintenant vous connecter.' 
+          } 
+        })
+      }, 500)
     } catch (error) {
-      console.error('Erreur d\'inscription:', error)
       const errorMessage = formatErrorMessage(error)
       setError(errorMessage)
     } finally {
@@ -39,6 +45,13 @@ function Register() {
 
   return (
     <div className="w-full min-h-screen bg-background-light dark:bg-background-dark">
+      {flashMessage && (
+        <FlashMessage
+          message={flashMessage.message}
+          type={flashMessage.type}
+          onClose={() => setFlashMessage(null)}
+        />
+      )}
       <RegisterForm onSubmit={handleRegister} isLoading={isLoading} error={error} />
     </div>
   )
