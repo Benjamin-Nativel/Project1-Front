@@ -1,4 +1,5 @@
-import { Link, useLocation } from 'react-router-dom'
+import { Link, useLocation, useNavigate } from 'react-router-dom'
+import { removeToken } from '../../utils/storage'
 
 /**
  * Composant BottomNavigation - Barre de navigation en bas (Mobile First)
@@ -7,6 +8,12 @@ import { Link, useLocation } from 'react-router-dom'
  */
 function BottomNavigation({ items = [] }) {
   const location = useLocation()
+  const navigate = useNavigate()
+
+  const handleLogout = () => {
+    removeToken()
+    navigate('/', { replace: true })
+  }
 
   const defaultItems = [
     {

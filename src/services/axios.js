@@ -5,9 +5,6 @@ import { getToken, removeToken } from '../utils/storage'
 /**
  * Instance axios configurée pour l'application
  */
-console.log('🔧 [Axios] Configuration de l\'instance axios')
-console.log('   API_BASE_URL:', API_BASE_URL)
-
 const axiosInstance = axios.create({
   baseURL: API_BASE_URL,
   timeout: 10000, // 10 secondes
@@ -16,23 +13,12 @@ const axiosInstance = axios.create({
   },
 })
 
-console.log('   baseURL configurée:', axiosInstance.defaults.baseURL)
-
 /**
  * Intercepteur de requête : ajoute le token d'authentification
  */
 axiosInstance.interceptors.request.use(
   (config) => {
     const token = getToken()
-    
-    console.log('📤 [Axios Interceptor] Requête:', {
-      method: config.method?.toUpperCase(),
-      url: config.url,
-      baseURL: config.baseURL,
-      fullURL: `${config.baseURL}${config.url}`,
-      hasToken: !!token,
-      headers: config.headers
-    })
     
     if (token) {
       config.headers.Authorization = `Bearer ${token}`
@@ -41,7 +27,6 @@ axiosInstance.interceptors.request.use(
     return config
   },
   (error) => {
-    console.error('❌ [Axios Interceptor] Erreur dans la requête:', error)
     return Promise.reject(error)
   }
 )

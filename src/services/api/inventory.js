@@ -11,22 +11,9 @@ export const inventoryService = {
    */
   getItems: async (filters = {}) => {
     try {
-      console.log('🔍 [Inventory API] Début de la requête getItems')
-      console.log('📋 [Inventory API] Filtres:', filters)
-      console.log('🌐 [Inventory API] URL de base:', axiosInstance.defaults.baseURL)
-      console.log('🔗 [Inventory API] URL complète:', `${axiosInstance.defaults.baseURL}/api/inventories`)
-      
       const response = await axiosInstance.get('/api/inventories', {
         params: filters,
       })
-      
-      console.log('✅ [Inventory API] Réponse reçue:')
-      console.log('   Status:', response.status)
-      console.log('   Headers:', response.headers)
-      console.log('   Data complète:', response.data)
-      console.log('   Type de data:', typeof response.data)
-      console.log('   Items:', response.data.items)
-      console.log('   Inventory:', response.data.inventory)
       
       // Transformer les données pour correspondre au format attendu par le frontend
       const { items, inventory } = response.data
@@ -51,35 +38,8 @@ export const inventoryService = {
       // Trier par quantité (décroissant : les items avec le plus de quantité en premier)
       formattedItems.sort((a, b) => b.quantity - a.quantity)
       
-      console.log('📦 [Inventory API] Items formatés (triés par quantité):', formattedItems)
-      console.log('   Nombre d\'items:', formattedItems.length)
-      
       return formattedItems
     } catch (error) {
-      console.error('❌ [Inventory API] Erreur lors de la requête:')
-      console.error('   Type d\'erreur:', error.constructor.name)
-      console.error('   Message:', error.message)
-      
-      if (error.response) {
-        // La requête a été faite et le serveur a répondu avec un code d'erreur
-        console.error('   Status:', error.response.status)
-        console.error('   Status Text:', error.response.statusText)
-        console.error('   Headers:', error.response.headers)
-        console.error('   Data:', error.response.data)
-        console.error('   URL:', error.config?.url)
-        console.error('   Base URL:', error.config?.baseURL)
-        console.error('   URL complète:', `${error.config?.baseURL}${error.config?.url}`)
-      } else if (error.request) {
-        // La requête a été faite mais aucune réponse n'a été reçue
-        console.error('   Aucune réponse reçue du serveur')
-        console.error('   Request:', error.request)
-        console.error('   URL:', error.config?.url)
-        console.error('   Base URL:', error.config?.baseURL)
-      } else {
-        // Une erreur s'est produite lors de la configuration de la requête
-        console.error('   Erreur de configuration:', error.message)
-      }
-      
       throw error
     }
   },
@@ -105,15 +65,12 @@ export const inventoryService = {
    */
   addItem: async (itemData) => {
     try {
-      console.log('➕ [Inventory API] Ajout d\'item:', itemData)
       const response = await axiosInstance.post('/api/inventories/add', {
         itemId: itemData.itemId || itemData.id,
         quantity: itemData.quantity
       })
-      console.log('✅ [Inventory API] Item ajouté:', response.data)
       return response.data
     } catch (error) {
-      console.error('❌ [Inventory API] Erreur lors de l\'ajout:', error)
       throw error
     }
   },
@@ -154,15 +111,12 @@ export const inventoryService = {
    */
   removeQuantity: async (itemId, quantity) => {
     try {
-      console.log('➖ [Inventory API] Retrait de quantité:', { itemId, quantity })
       const response = await axiosInstance.post('/api/inventories/remove', {
         itemId,
         quantity
       })
-      console.log('✅ [Inventory API] Quantité retirée:', response.data)
       return response.data
     } catch (error) {
-      console.error('❌ [Inventory API] Erreur lors du retrait:', error)
       throw error
     }
   },

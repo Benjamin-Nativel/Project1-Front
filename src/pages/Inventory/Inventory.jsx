@@ -31,13 +31,9 @@ function Inventory() {
   }, [])
 
   const loadInventory = async () => {
-    console.log('🚀 [Inventory] Début du chargement de l\'inventaire')
-    
     // Vérifier le cache d'abord
     const now = Date.now()
     if (inventoryCache && cacheTimestamp && (now - cacheTimestamp) < CACHE_DURATION) {
-      console.log('💾 [Inventory] Utilisation du cache (âge:', Math.round((now - cacheTimestamp) / 1000), 'secondes)')
-      console.log('📦 [Inventory] Données du cache:', inventoryCache)
       setItems(inventoryCache)
       setIsLoading(false)
       return
@@ -47,45 +43,25 @@ function Inventory() {
       setIsLoading(true)
       setError(null)
       
-      console.log('📡 [Inventory] Appel de l\'API...')
       const data = await inventoryService.getItems()
-      
-      console.log('✅ [Inventory] Données reçues de l\'API:')
-      console.log('   Type:', typeof data)
-      console.log('   Est un array?', Array.isArray(data))
-      console.log('   Nombre d\'éléments:', Array.isArray(data) ? data.length : 'N/A')
-      console.log('   Contenu:', data)
       
       // Mettre à jour le cache
       inventoryCache = data
       cacheTimestamp = now
       
       setItems(data)
-      console.log('✅ [Inventory] Inventaire chargé avec succès')
     } catch (error) {
-      console.error('❌ [Inventory] Erreur lors du chargement de l\'inventaire:', error)
-      console.error('   Détails complets:', {
-        message: error.message,
-        response: error.response,
-        request: error.request,
-        config: error.config
-      })
       const errorMessage = formatErrorMessage(error)
       setError(errorMessage)
     } finally {
       setIsLoading(false)
-      console.log('🏁 [Inventory] Fin du chargement (isLoading: false)')
     }
   }
 
   const loadCategories = async () => {
-    console.log('🚀 [Categories] Début du chargement des catégories')
-    
     // Vérifier le cache d'abord
     const now = Date.now()
     if (categoriesCache && categoriesCacheTimestamp && (now - categoriesCacheTimestamp) < CATEGORIES_CACHE_DURATION) {
-      console.log('💾 [Categories] Utilisation du cache (âge:', Math.round((now - categoriesCacheTimestamp) / 1000), 'secondes)')
-      console.log('📦 [Categories] Catégories du cache:', categoriesCache)
       setCategories(categoriesCache)
       setIsLoadingCategories(false)
       return
@@ -94,21 +70,14 @@ function Inventory() {
     try {
       setIsLoadingCategories(true)
       
-      console.log('📡 [Categories] Appel de l\'API...')
       const data = await categoriesService.getCategories()
-      
-      console.log('✅ [Categories] Catégories reçues de l\'API:')
-      console.log('   Nombre de catégories:', data.length)
-      console.log('   Contenu:', data)
       
       // Mettre à jour le cache
       categoriesCache = data
       categoriesCacheTimestamp = now
       
       setCategories(data)
-      console.log('✅ [Categories] Catégories chargées avec succès')
     } catch (error) {
-      console.error('❌ [Categories] Erreur lors du chargement des catégories:', error)
       // En cas d'erreur, utiliser des catégories par défaut
       const defaultCategories = [
         { id: 0, name: 'Tout' },
@@ -117,10 +86,8 @@ function Inventory() {
         { id: 3, name: 'Épicerie' }
       ]
       setCategories(defaultCategories)
-      console.log('⚠️ [Categories] Utilisation des catégories par défaut')
     } finally {
       setIsLoadingCategories(false)
-      console.log('🏁 [Categories] Fin du chargement (isLoadingCategories: false)')
     }
   }
 
@@ -150,7 +117,6 @@ function Inventory() {
         await inventoryService.removeQuantity(itemId, Math.abs(quantityChange))
       }
     } catch (error) {
-      console.error('Erreur lors de la mise à jour:', error)
       // Recharger les données en cas d'erreur
       loadInventory()
     }
@@ -171,7 +137,6 @@ function Inventory() {
       inventoryCache = updatedItems
       cacheTimestamp = Date.now()
     } catch (error) {
-      console.error('Erreur lors de l\'ajout:', error)
       // Recharger les données en cas d'erreur
       loadInventory()
     }
