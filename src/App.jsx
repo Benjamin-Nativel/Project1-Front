@@ -8,6 +8,9 @@ import Recipes from './pages/Recipes'
 import AddItem from './pages/AddItem'
 import RecipeResultPage from './pages/RecipeResult'
 import Profile from './pages/Profile'
+import AdminIngredients from './pages/AdminIngredients'
+import AdminCategories from './pages/AdminCategories'
+import AdminUsers from './pages/AdminUsers'
 import ProtectedRoute from './components/ProtectedRoute'
 import PublicRoute from './components/PublicRoute'
 import { routes } from './config/routes'
@@ -93,6 +96,30 @@ function App() {
           element={
             <ProtectedRoute>
               <Profile />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path={routes.ADMIN_INGREDIENTS}
+          element={
+            <ProtectedRoute>
+              <AdminIngredients />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path={routes.ADMIN_CATEGORIES}
+          element={
+            <ProtectedRoute>
+              <AdminCategories />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path={routes.ADMIN_USERS}
+          element={
+            <ProtectedRoute>
+              <AdminUsers />
             </ProtectedRoute>
           }
         />

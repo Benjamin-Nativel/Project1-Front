@@ -11,6 +11,9 @@ export const routes = {
   RECIPES: '/recipes',
   RECIPE_RESULT: '/resultat-recette',
   PROFILE: '/profil',
+  ADMIN_INGREDIENTS: '/admin/ingredients',
+  ADMIN_CATEGORIES: '/admin/categories',
+  ADMIN_USERS: '/admin/users',
   ABOUT: '/about',
   CONTACT: '/contact',
 }

@@ -77,6 +77,97 @@ export const itemsService = {
       throw error
     }
   },
+
+  /**
+   * Récupérer tous les items (pour admin)
+   * @returns {Promise<Array>} - Liste de tous les items
+   */
+  getAllItems: async () => {
+    try {
+      // Utiliser l'endpoint inventories qui retourne tous les items
+      const response = await axiosInstance.get('/api/inventories')
+      const { items } = response.data
+      
+      // Transformer les données pour correspondre au format attendu
+      return Array.isArray(items) ? items.map(item => ({
+        id: item.id,
+        name: item.name,
+        category: item.category?.name || 'Autre',
+        emoji: item.img || '📦',
+        img: item.img
+      })) : []
+    } catch (error) {
+      throw error
+    }
+  },
+
+  /**
+   * Mettre à jour un item
+   * @param {number} itemId - ID de l'item
+   * @param {Object} itemData - { name, emoji?, category? }
+   * @returns {Promise<Object>} - Item mis à jour
+   */
+  updateItem: async (itemId, itemData) => {
+    try {
+      // Créer un FormData similaire à createItem pour gérer l'image
+      const formData = new FormData()
+      
+      const dataJson = {
+        name: itemData.name.trim(),
+        // Si category est fourni, l'utiliser, sinon utiliser une catégorie par défaut
+        category: itemData.category || 1 // Catégorie par défaut
+      }
+      
+      const dataString = JSON.stringify(dataJson)
+      formData.append('data', dataString)
+      
+      // Ajouter l'image si elle existe
+      if (itemData.image) {
+        formData.append('image', itemData.image)
+      }
+      
+      // Note: L'API pourrait nécessiter un endpoint PUT /api/items/{id}
+      // Pour l'instant, on utilise POST /api/items/update/{id} ou similaire
+      // Si l'endpoint n'existe pas, on devra l'ajouter côté backend
+      const response = await axiosInstance.put(`/api/items/${itemId}`, formData)
+      
+      return response.data
+    } catch (error) {
+      // Si l'endpoint PUT n'existe pas, on peut essayer POST
+      if (error.response?.status === 404 || error.response?.status === 405) {
+        // Fallback: utiliser POST avec update dans le body
+        const formData = new FormData()
+        const dataJson = {
+          name: itemData.name.trim(),
+          category: itemData.category || 1
+        }
+        const dataString = JSON.stringify(dataJson)
+        formData.append('data', dataString)
+        
+        // Ajouter l'image si elle existe
+        if (itemData.image) {
+          formData.append('image', itemData.image)
+        }
+        
+        const response = await axiosInstance.post(`/api/items/update/${itemId}`, formData)
+        return response.data
+      }
+      throw error
+    }
+  },
+
+  /**
+   * Supprimer un item
+   * @param {number} itemId - ID de l'item
+   * @returns {Promise<void>}
+   */
+  deleteItem: async (itemId) => {
+    try {
+      await axiosInstance.delete(`/api/items/${itemId}`)
+    } catch (error) {
+      throw error
+    }
+  },
 }
 
 export default itemsService
