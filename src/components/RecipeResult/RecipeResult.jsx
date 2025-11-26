@@ -32,13 +32,56 @@ function RecipeResult({ recipe, onGenerateAnother }) {
     )
   }
 
+  // Vérifier que les données sont bien reçues (pour débogage)
+  console.log('Données reçues dans RecipeResult:', recipe)
+  
   // Utiliser les données de l'API
+  // Convertir matching_score en nombre si c'est une chaîne
+  const parseMatchingScore = (score) => {
+    if (score === null || score === undefined) return null
+    const numScore = typeof score === 'string' ? parseFloat(score) : score
+    return isNaN(numScore) ? null : numScore
+  }
+
   const recipeData = {
     title: recipe.recipe_name || 'Recette',
-    matching_score: recipe.matching_score || 0,
+    matching_score: parseMatchingScore(recipe.matching_score),
     preparation_time_minutes: recipe.preparation_time_minutes || 0,
     ingredients: recipe.ingredients || [],
     steps: recipe.steps || [],
+  }
+  
+  // Vérifier que toutes les données importantes sont présentes
+  console.log('Données formatées pour affichage:', recipeData)
+  console.log('Matching score brut:', recipe.matching_score)
+  console.log('Matching score parsé:', recipeData.matching_score)
+
+  // Fonction pour déterminer la couleur du score selon sa valeur
+  const getScoreColor = (score) => {
+    if (score >= 75) return 'text-green-500'
+    if (score >= 50) return 'text-yellow-500'
+    return 'text-red-500'
+  }
+
+  // Fonction pour déterminer la couleur de la barre de progression
+  const getProgressBarColor = (score) => {
+    if (score >= 75) return 'bg-green-500'
+    if (score >= 50) return 'bg-yellow-500'
+    return 'bg-red-500'
+  }
+
+  // Fonction pour obtenir la couleur du badge
+  const getBadgeColor = (score) => {
+    if (score >= 75) return 'bg-green-100 dark:bg-green-900 text-green-700 dark:text-green-300'
+    if (score >= 50) return 'bg-yellow-100 dark:bg-yellow-900 text-yellow-700 dark:text-yellow-300'
+    return 'bg-red-100 dark:bg-red-900 text-red-700 dark:text-red-300'
+  }
+
+  // Fonction pour obtenir le label du score
+  const getScoreLabel = (score) => {
+    if (score >= 75) return 'Excellent'
+    if (score >= 50) return 'Bon'
+    return 'Faible'
   }
 
   const handleGenerateAnother = () => {
@@ -65,15 +108,51 @@ function RecipeResult({ recipe, onGenerateAnother }) {
                 <span className="text-sm md:text-base">{recipeData.preparation_time_minutes} min</span>
               </div>
             )}
-            {recipeData.matching_score > 0 && (
+          </div>
+          
+          {/* Matching Score Visual Indicator */}
+          {recipeData.matching_score !== null && recipeData.matching_score !== undefined ? (
+            <div className="mt-4 md:mt-6 p-4 md:p-5 rounded-xl bg-surface-light dark:bg-surface-dark border border-gray-200 dark:border-gray-700 shadow-soft dark:shadow-soft-dark">
+              <div className="flex items-center justify-between mb-3">
+                <div className="flex items-center gap-2">
+                  <span className="material-symbols-outlined text-lg text-primary">percent</span>
+                  <span className="text-sm md:text-base font-medium text-text-light dark:text-text-dark">
+                    Score de correspondance
+                  </span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className={`text-lg md:text-xl font-bold ${getScoreColor(recipeData.matching_score)}`}>
+                    {recipeData.matching_score}%
+                  </span>
+                  <span className={`text-xs md:text-sm font-medium px-2 py-1 rounded-full ${getBadgeColor(recipeData.matching_score)}`}>
+                    {getScoreLabel(recipeData.matching_score)}
+                  </span>
+                </div>
+              </div>
+              
+              {/* Progress Bar */}
+              <div className="w-full h-3 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
+                <div
+                  className={`h-full ${getProgressBarColor(recipeData.matching_score)} transition-all duration-1000 ease-out rounded-full`}
+                  style={{ width: `${Math.min(Math.max(recipeData.matching_score, 0), 100)}%` }}
+                />
+              </div>
+              
+              {/* Score Description */}
+              <p className="mt-2 text-xs md:text-sm text-text-secondary-light dark:text-text-secondary-dark">
+                Cette recette correspond à {recipeData.matching_score}% de vos ingrédients disponibles
+              </p>
+            </div>
+          ) : (
+            <div className="mt-4 md:mt-6 p-4 md:p-5 rounded-xl bg-surface-light dark:bg-surface-dark border border-gray-200 dark:border-gray-700 shadow-soft dark:shadow-soft-dark">
               <div className="flex items-center gap-2 text-text-secondary-light dark:text-text-secondary-dark">
-                <span className="material-symbols-outlined text-lg">star</span>
+                <span className="material-symbols-outlined text-lg">info</span>
                 <span className="text-sm md:text-base">
-                  {recipeData.matching_score}% de correspondance
+                  Score de correspondance non disponible
                 </span>
               </div>
-            )}
-          </div>
+            </div>
+          )}
         </div>
 
         {/* Ingredients and Instructions */}

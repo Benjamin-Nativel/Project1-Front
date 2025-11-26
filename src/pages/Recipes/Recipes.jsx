@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { RecipePrompt, BottomNavigation, FlashMessage } from '../../components'
 import { recipesService } from '../../services/api'
 import { formatErrorMessage } from '../../utils/errors'
+import { routes } from '../../config/routes'
 
 /**
  * Page de recettes
@@ -21,17 +22,35 @@ function Recipes() {
       // Appel à l'API pour générer la recette
       const recipeData = await recipesService.generateRecipe(prompt)
       
+      // Vérifier que les données sont bien reçues
+      console.log('Données reçues de l\'API:', recipeData)
+      
       // Transformer les données de l'API au format attendu par RecipeResult
+      // On passe toutes les données de l'API pour ne rien perdre
       const formattedRecipe = {
         recipe_name: recipeData.recipe_name,
-        matching_score: recipeData.matching_score,
+        matching_score: recipeData.matching_score !== undefined ? recipeData.matching_score : null,
         preparation_time_minutes: recipeData.preparation_time_minutes,
         ingredients: recipeData.ingredients || [],
         steps: recipeData.steps || [],
+        // Passer toutes les autres propriétés de l'API si elles existent
+        ...(recipeData.id && { id: recipeData.id }),
+        ...(recipeData.category && { category: recipeData.category }),
+        ...(recipeData.description && { description: recipeData.description }),
+        // Ajouter toutes les autres propriétés non listées
+        ...Object.keys(recipeData).reduce((acc, key) => {
+          if (!['recipe_name', 'matching_score', 'preparation_time_minutes', 'ingredients', 'steps'].includes(key)) {
+            acc[key] = recipeData[key]
+          }
+          return acc
+        }, {})
       }
       
+      console.log('Données formatées pour RecipeResult:', formattedRecipe)
+      console.log('Matching score dans formattedRecipe:', formattedRecipe.matching_score, 'Type:', typeof formattedRecipe.matching_score)
+      
       // Naviguer vers la page de résultat avec les données de la recette
-      navigate('/resultat-recette', { state: { recipe: formattedRecipe } })
+      navigate(routes.RECIPE_RESULT, { state: { recipe: formattedRecipe } })
     } catch (error) {
       console.error('Erreur lors de la génération de la recette:', error)
       const errorMessage = formatErrorMessage(error)

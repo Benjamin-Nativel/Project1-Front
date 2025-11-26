@@ -8,6 +8,7 @@ import AddItem from './pages/AddItem'
 import RecipeResultPage from './pages/RecipeResult'
 import ProtectedRoute from './components/ProtectedRoute'
 import PublicRoute from './components/PublicRoute'
+import { routes } from './config/routes'
 
 /**
  * Composant racine de l'application
@@ -70,7 +71,7 @@ function App() {
           }
         />
         <Route
-          path="/resultat-recette"
+          path={routes.RECIPE_RESULT}
           element={
             <ProtectedRoute>
               <RecipeResultPage />
