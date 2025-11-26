@@ -6,6 +6,7 @@ export const routes = {
   LOGIN: '/connexion',
   REGISTER: '/inscription',
   INVENTORY: '/inventaire',
+  MY_INGREDIENTS: '/mes-ingredients',
   ADD_ITEM: '/ajouter-item',
   RECIPES: '/recipes',
   RECIPE_RESULT: '/resultat-recette',

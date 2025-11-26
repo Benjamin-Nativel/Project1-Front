@@ -24,8 +24,10 @@ function ProfileHeader() {
     }
   }
 
+  // Pour les admins, name n'est pas retourné par l'API, utiliser email
+  // Pour les clients, utiliser name si disponible, sinon email
   const userName = user?.name || user?.email || 'Utilisateur'
-  const isAdmin = user?.role === 'admin' || user?.role === 'ADMIN'
+  const isAdmin = user?.roles?.includes('ROLE_ADMIN') || user?.role === 'admin' || user?.role === 'ADMIN'
   const title = isAdmin ? 'Mon Profil Admin' : 'Mon Profil'
 
   return (

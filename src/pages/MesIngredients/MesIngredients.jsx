@@ -3,15 +3,16 @@ import { useLocation } from 'react-router-dom'
 import { BottomNavigation, InventoryContent, FlashMessage } from '../../components'
 import { inventoryService } from '../../services/api'
 import { formatErrorMessage } from '../../utils/errors'
-import { getInventoryCache, setInventoryCache } from '../../utils/storage'
+import { getClientItemsCache, setClientItemsCache } from '../../utils/storage'
 import { useCategories } from '../../hooks'
 import { useApp } from '../../contexts/AppContext'
 
 /**
- * Page d'inventaire
- * Composant principal de la page d'inventaire
+ * Page Mes Ingrédients
+ * Affiche uniquement les ingrédients créés par l'utilisateur (client_items)
+ * Réutilise le composant InventoryContent
  */
-function Inventory() {
+function MesIngredients() {
   const [items, setItems] = useState([])
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState(null)
@@ -38,15 +39,17 @@ function Inventory() {
 
   // Charger les données au montage du composant
   useEffect(() => {
-    loadInventory()
+    loadClientItems()
   }, [])
 
-  const loadInventory = async () => {
+  const loadClientItems = async () => {
     // Vérifier le cache localStorage d'abord
-    const cachedData = getInventoryCache()
+    const cachedData = getClientItemsCache()
     if (cachedData) {
       setItems(cachedData)
       setIsLoading(false)
+      // Charger en arrière-plan pour mettre à jour le cache
+      loadClientItemsInBackground()
       return
     }
 
@@ -54,10 +57,11 @@ function Inventory() {
       setIsLoading(true)
       setError(null)
       
-      const data = await inventoryService.getItems()
+      // Charger uniquement les items créés par l'utilisateur (client_items)
+      const data = await inventoryService.getClientItems()
       
-      // Mettre à jour le cache localStorage
-      setInventoryCache(data)
+      // Mettre à jour le cache
+      setClientItemsCache(data)
       
       setItems(data)
     } catch (error) {
@@ -68,6 +72,16 @@ function Inventory() {
     }
   }
 
+  // Charger les client_items en arrière-plan pour mettre à jour le cache
+  const loadClientItemsInBackground = async () => {
+    try {
+      const data = await inventoryService.getClientItems()
+      setClientItemsCache(data)
+      setItems(data)
+    } catch (error) {
+      console.error('Erreur lors du chargement en arrière-plan des client_items:', error)
+    }
+  }
 
   const handleItemUpdate = async (itemId, updatedItem) => {
     const oldItem = items.find(item => item.id === itemId)
@@ -80,9 +94,6 @@ function Inventory() {
       item.id === itemId ? updatedItem : item
     )
     setItems(updatedItems)
-    
-    // Mettre à jour le cache localStorage
-    setInventoryCache(updatedItems)
 
     // Mettre à jour sur le serveur
     try {
@@ -93,29 +104,18 @@ function Inventory() {
         // Retirer de la quantité
         await inventoryService.removeQuantity(itemId, Math.abs(quantityChange))
       }
+      // Recharger les données après la mise à jour
+      const updatedData = await inventoryService.getClientItems()
+      setClientItemsCache(updatedData)
+      setItems(updatedData)
     } catch (error) {
       // Recharger les données en cas d'erreur
-      loadInventory()
+      loadClientItems()
     }
   }
 
   const handleAddItem = () => {
     // La navigation est gérée dans InventoryContent
-  }
-
-  const handleNewItem = async (newItem) => {
-    try {
-      // Ajouter l'item via l'API
-      const createdItem = await inventoryService.addItem(newItem)
-      
-      // Mettre à jour l'état local et le cache localStorage
-      const updatedItems = [...items, createdItem]
-      setItems(updatedItems)
-      setInventoryCache(updatedItems)
-    } catch (error) {
-      // Recharger les données en cas d'erreur
-      loadInventory()
-    }
   }
 
   return (
@@ -137,7 +137,7 @@ function Inventory() {
           isLoading={isLoading}
           isLoadingCategories={isLoadingCategories}
           error={error}
-          onRetry={loadInventory}
+          onRetry={loadClientItems}
           showAddButton={showAddButton}
         />
       </div>
@@ -145,5 +145,5 @@ function Inventory() {
   )
 }
 
-export default Inventory
+export default MesIngredients
 

@@ -3,6 +3,7 @@ import MainLayout from './layouts/MainLayout'
 import Home from './pages/Home'
 import Register from './pages/Register'
 import Inventory from './pages/Inventory'
+import MesIngredients from './pages/MesIngredients'
 import Recipes from './pages/Recipes'
 import AddItem from './pages/AddItem'
 import RecipeResultPage from './pages/RecipeResult'
@@ -52,6 +53,14 @@ function App() {
           element={
             <ProtectedRoute>
               <Inventory />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/mes-ingredients"
+          element={
+            <ProtectedRoute>
+              <MesIngredients />
             </ProtectedRoute>
           }
         />

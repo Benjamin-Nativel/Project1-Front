@@ -45,8 +45,9 @@ export const clearAuth = () => {
   removeToken()
   // Supprimer les données utilisateur
   removeUser()
-  // Nettoyer aussi le cache de l'inventaire et des catégories lors de la déconnexion
+  // Nettoyer aussi le cache de l'inventaire, des client_items et des catégories lors de la déconnexion
   clearInventoryCache()
+  clearClientItemsCache()
   clearCategoriesCache()
 }
 
@@ -140,6 +141,52 @@ export const setCategoriesCache = (data) => {
 export const clearCategoriesCache = () => {
   localStorage.removeItem(CATEGORIES_CACHE_KEY)
   localStorage.removeItem(CATEGORIES_CACHE_TIMESTAMP_KEY)
+}
+
+/**
+ * Cache des client_items (ingrédients créés par l'utilisateur)
+ */
+const CLIENT_ITEMS_CACHE_KEY = 'client_items_cache'
+const CLIENT_ITEMS_CACHE_TIMESTAMP_KEY = 'client_items_cache_timestamp'
+const CLIENT_ITEMS_CACHE_DURATION = 5 * 60 * 1000 // 5 minutes
+
+export const getClientItemsCache = () => {
+  const cacheData = localStorage.getItem(CLIENT_ITEMS_CACHE_KEY)
+  const timestamp = localStorage.getItem(CLIENT_ITEMS_CACHE_TIMESTAMP_KEY)
+  
+  if (!cacheData || !timestamp) {
+    return null
+  }
+  
+  const now = Date.now()
+  const cacheAge = now - parseInt(timestamp, 10)
+  
+  // Vérifier si le cache est encore valide
+  if (cacheAge > CLIENT_ITEMS_CACHE_DURATION) {
+    clearClientItemsCache()
+    return null
+  }
+  
+  try {
+    return JSON.parse(cacheData)
+  } catch (error) {
+    clearClientItemsCache()
+    return null
+  }
+}
+
+export const setClientItemsCache = (data) => {
+  try {
+    localStorage.setItem(CLIENT_ITEMS_CACHE_KEY, JSON.stringify(data))
+    localStorage.setItem(CLIENT_ITEMS_CACHE_TIMESTAMP_KEY, Date.now().toString())
+  } catch (error) {
+    console.error('Erreur lors de la sauvegarde du cache client_items:', error)
+  }
+}
+
+export const clearClientItemsCache = () => {
+  localStorage.removeItem(CLIENT_ITEMS_CACHE_KEY)
+  localStorage.removeItem(CLIENT_ITEMS_CACHE_TIMESTAMP_KEY)
 }
 
 

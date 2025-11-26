@@ -20,6 +20,7 @@ import authService from './api/auth'
 import inventoryService from './api/inventory'
 import recipesService from './api/recipes'
 import categoriesService from './api/categories'
+import clientService from './api/client'
 
 export default api
-export { authService, inventoryService, recipesService, categoriesService }
+export { authService, inventoryService, recipesService, categoriesService, clientService }

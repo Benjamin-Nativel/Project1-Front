@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import ProfileCard from '../ProfileCard'
 import { inventoryService, recipesService } from '../../services/api'
+import { getClientItemsCache, setClientItemsCache } from '../../utils/storage'
 
 /**
  * Composant UserProfileContent - Contenu de la page de profil pour les utilisateurs
@@ -19,10 +20,23 @@ function UserProfileContent() {
     try {
       setIsLoading(true)
       
-      // Charger le nombre d'items dans l'inventaire
-      const inventoryItems = await inventoryService.getItems()
-      const itemsWithQuantity = inventoryItems.filter(item => item.quantity > 0)
-      setInventoryCount(itemsWithQuantity.length)
+      // Vérifier le cache localStorage d'abord
+      const cachedData = getClientItemsCache()
+      if (cachedData) {
+        setInventoryCount(cachedData.length)
+        setIsLoading(false)
+        // Charger en arrière-plan pour mettre à jour le cache
+        loadClientItemsInBackground()
+        return
+      }
+      
+      // Charger les items créés par l'utilisateur (client_items uniquement)
+      // getClientItems() retourne tous les items dans client_items (même ceux avec quantité 0)
+      const clientItems = await inventoryService.getClientItems()
+      // Mettre à jour le cache
+      setClientItemsCache(clientItems)
+      // Compter tous les ingrédients créés par l'utilisateur
+      setInventoryCount(clientItems.length)
 
       // Charger le nombre de recettes (si l'API le supporte)
       try {
@@ -40,18 +54,29 @@ function UserProfileContent() {
     }
   }
 
+  // Charger les client_items en arrière-plan pour mettre à jour le cache
+  const loadClientItemsInBackground = async () => {
+    try {
+      const clientItems = await inventoryService.getClientItems()
+      setClientItemsCache(clientItems)
+      setInventoryCount(clientItems.length)
+    } catch (error) {
+      console.error('Erreur lors du chargement en arrière-plan des client_items:', error)
+    }
+  }
+
   return (
     <div className="w-full px-4 space-y-4">
       <ProfileCard
         icon="inventory_2"
-        title="Mon Inventaire"
+        title="Mes Ingrédients"
         description={
           <span>
             <span className="text-primary font-semibold">{isLoading ? '...' : inventoryCount}</span>
-            {' '}items dans votre inventaire
+            {' '}ingrédients créés
           </span>
         }
-        path="/inventaire"
+        path="/mes-ingredients"
       />
       <ProfileCard
         icon="restaurant_menu"

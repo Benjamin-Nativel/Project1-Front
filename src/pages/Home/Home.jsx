@@ -1,8 +1,9 @@
 import { useState, useEffect } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { LoginForm, FlashMessage } from '../../components'
-import { authService } from '../../services/api'
+import { authService, clientService } from '../../services/api'
 import { formatErrorMessage } from '../../utils/errors'
+import { useApp } from '../../contexts/AppContext'
 
 /**
  * Page d'accueil
@@ -14,6 +15,7 @@ function Home() {
   const [flashMessage, setFlashMessage] = useState(null)
   const navigate = useNavigate()
   const location = useLocation()
+  const { setUser } = useApp()
 
   // Récupérer le message flash depuis le state de navigation
   useEffect(() => {
@@ -33,7 +35,18 @@ function Home() {
     setFlashMessage(null)
     
     try {
+      // Connexion et récupération du token
       await authService.login(formData)
+      
+      // Récupérer les données du client depuis l'API /api/client
+      try {
+        const clientData = await clientService.getClientInfo()
+        setUser(clientData)
+      } catch (clientError) {
+        console.error('Erreur lors de la récupération des données client:', clientError)
+        // Continuer même si la récupération des données client échoue
+        // Le token est valide, les données seront récupérées sur la page Profile
+      }
       
       // Afficher le message de succès
       setFlashMessage({
