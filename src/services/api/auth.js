@@ -8,19 +8,24 @@ export const authService = {
   /**
    * Connexion d'un utilisateur
    * @param {Object} credentials - { email, password }
-   * @returns {Promise<Object>} - { token }
+   * @returns {Promise<Object>} - { token, user }
    */
   login: async (credentials) => {
     try {
       const response = await axiosInstance.post('/user/login', credentials)
-      const { token } = response.data
+      const { token, user } = response.data
       
       // Stocker le token
       if (token) {
         setToken(token)
       }
       
-      return { token }
+      // Stocker les données utilisateur si disponibles
+      if (user) {
+        setUser(user)
+      }
+      
+      return { token, user }
     } catch (error) {
       // Laisser formatErrorMessage gérer le formatage des erreurs
       throw error
@@ -51,15 +56,18 @@ export const authService = {
 
   /**
    * Déconnexion de l'utilisateur
+   * Supprime le token JWT du localStorage et nettoie toutes les données d'authentification
    * @returns {Promise<void>}
    */
   logout: async () => {
     try {
+      // Tenter de notifier le serveur de la déconnexion (optionnel)
       await axiosInstance.post('/auth/logout')
     } catch (error) {
-      // Même en cas d'erreur, on nettoie le localStorage
-      console.error('Erreur lors de la déconnexion:', error)
+      // Même si l'appel API échoue, on continue à nettoyer localement
+      console.error('Erreur lors de la déconnexion côté serveur:', error)
     } finally {
+      // Toujours supprimer le token JWT et nettoyer toutes les données d'authentification
       clearAuth()
     }
   },

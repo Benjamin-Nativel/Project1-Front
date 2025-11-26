@@ -27,6 +27,12 @@ function BottomNavigation({ items = [] }) {
       icon: 'restaurant_menu',
       label: 'Recette',
       isActive: location.pathname === '/recipes'
+    },
+    {
+      path: '/profil',
+      icon: 'person',
+      label: 'Profil',
+      isActive: location.pathname === '/profil'
     }
   ]
 

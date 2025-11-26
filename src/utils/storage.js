@@ -38,9 +38,12 @@ export const removeUser = () => {
 
 /**
  * Nettoyer toutes les données d'authentification
+ * Supprime le token JWT, les données utilisateur et les caches
  */
 export const clearAuth = () => {
+  // Supprimer le token JWT du localStorage
   removeToken()
+  // Supprimer les données utilisateur
   removeUser()
   // Nettoyer aussi le cache de l'inventaire et des catégories lors de la déconnexion
   clearInventoryCache()
