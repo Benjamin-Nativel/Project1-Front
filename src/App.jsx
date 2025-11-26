@@ -6,6 +6,7 @@ import Inventory from './pages/Inventory'
 import Recipes from './pages/Recipes'
 import AddItem from './pages/AddItem'
 import RecipeResultPage from './pages/RecipeResult'
+import Profile from './pages/Profile'
 import ProtectedRoute from './components/ProtectedRoute'
 import PublicRoute from './components/PublicRoute'
 import { routes } from './config/routes'
@@ -75,6 +76,14 @@ function App() {
           element={
             <ProtectedRoute>
               <RecipeResultPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path={routes.PROFILE}
+          element={
+            <ProtectedRoute>
+              <Profile />
             </ProtectedRoute>
           }
         />

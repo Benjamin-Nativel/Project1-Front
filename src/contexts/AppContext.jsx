@@ -1,4 +1,5 @@
-import { createContext, useContext, useState } from 'react'
+import { createContext, useContext, useState, useEffect } from 'react'
+import { getUser } from '../utils/storage'
 
 /**
  * Contexte global de l'application
@@ -9,6 +10,14 @@ const AppContext = createContext()
 export function AppProvider({ children }) {
   const [theme, setTheme] = useState('dark')
   const [user, setUser] = useState(null)
+
+  // Charger l'utilisateur depuis le localStorage au démarrage
+  useEffect(() => {
+    const storedUser = getUser()
+    if (storedUser) {
+      setUser(storedUser)
+    }
+  }, [])
 
   const value = {
     theme,

@@ -9,6 +9,7 @@ export const routes = {
   ADD_ITEM: '/ajouter-item',
   RECIPES: '/recipes',
   RECIPE_RESULT: '/resultat-recette',
+  PROFILE: '/profil',
   ABOUT: '/about',
   CONTACT: '/contact',
 }
