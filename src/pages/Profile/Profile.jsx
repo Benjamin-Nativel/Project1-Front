@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react'
 import { BottomNavigation, ProfileHeader, UserProfileContent, AdminProfileContent } from '../../components'
 import { useApp } from '../../contexts/AppContext'
-import { getUser, getToken, setUser as setUserStorage } from '../../utils/storage'
+import { getUser, getToken } from '../../utils/storage'
+import { clientService } from '../../services/api'
 
 /**
  * Page Profile - Page de profil de l'utilisateur
@@ -9,38 +10,47 @@ import { getUser, getToken, setUser as setUserStorage } from '../../utils/storag
  */
 function Profile() {
   const { user, setUser } = useApp()
+  const [isLoading, setIsLoading] = useState(true)
 
-  // Charger les données utilisateur au montage si elles ne sont pas dans le contexte
+  // Charger les données utilisateur depuis l'API /api/client
   useEffect(() => {
-    // Si l'utilisateur n'est pas dans le contexte, essayer de le charger depuis le localStorage
-    if (!user) {
-      const storedUser = getUser()
-      if (storedUser) {
-        setUser(storedUser)
-      } else {
-        // Si pas d'utilisateur stocké mais qu'on a un token, créer un utilisateur minimal
-        // pour éviter la déconnexion (le token est valide, le ProtectedRoute l'a vérifié)
-        const token = getToken()
-        if (token) {
-          // Créer un utilisateur minimal avec les données du token si possible
-          // Sinon, utiliser des valeurs par défaut
-          const minimalUser = {
-            email: 'utilisateur@example.com',
-            name: 'Utilisateur',
-            role: 'user'
+    const loadUserData = async () => {
+      try {
+        setIsLoading(true)
+        // Toujours récupérer les données depuis l'API pour avoir les informations à jour
+        const clientData = await clientService.getClientInfo()
+        setUser(clientData)
+      } catch (error) {
+        console.error('Erreur lors du chargement des données utilisateur:', error)
+        // En cas d'erreur, essayer de charger depuis le localStorage comme fallback
+        const storedUser = getUser()
+        if (storedUser) {
+          setUser(storedUser)
+        } else {
+          // Si pas d'utilisateur stocké mais qu'on a un token, créer un utilisateur minimal
+          const token = getToken()
+          if (token) {
+            const minimalUser = {
+              email: 'utilisateur@example.com',
+              name: 'Utilisateur',
+              role: 'user',
+              roles: ['ROLE_USER']
+            }
+            setUser(minimalUser)
           }
-          setUser(minimalUser)
         }
+      } finally {
+        setIsLoading(false)
       }
     }
-  }, [user, setUser])
 
-  // Si pas d'utilisateur mais qu'on a un token, afficher un état de chargement
-  // plutôt que de rediriger (le ProtectedRoute gère déjà l'authentification)
-  if (!user) {
+    loadUserData()
+  }, [setUser])
+
+  // Afficher un état de chargement pendant le chargement des données
+  if (isLoading || !user) {
     const token = getToken()
     if (token) {
-      // On a un token mais pas d'utilisateur dans le contexte, attendre un peu
       return (
         <div className="w-full min-h-screen bg-background-light dark:bg-background-dark flex md:flex-row relative overflow-x-hidden">
           <BottomNavigation />
@@ -56,14 +66,22 @@ function Profile() {
     return null
   }
 
-  const isAdmin = user.role === 'admin' || user.role === 'ADMIN'
+  // Vérifier si l'utilisateur est admin en vérifiant les rôles
+  const isAdmin = user.roles?.includes('ROLE_ADMIN') || user.role === 'admin' || user.role === 'ADMIN'
 
   // Mode développement : basculer entre admin et user
   const toggleDevMode = () => {
     const newRole = isAdmin ? 'user' : 'admin'
-    const updatedUser = { ...user, role: newRole }
+    const newRoles = isAdmin 
+      ? user.roles?.filter(r => r !== 'ROLE_ADMIN') || ['ROLE_USER']
+      : [...(user.roles || ['ROLE_USER']), 'ROLE_ADMIN']
+    
+    const updatedUser = { 
+      ...user, 
+      role: newRole,
+      roles: newRoles
+    }
     setUser(updatedUser)
-    setUserStorage(updatedUser)
   }
 
   return (

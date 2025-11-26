@@ -12,6 +12,7 @@ import { useNavigate } from 'react-router-dom'
  * @param {boolean} props.isLoadingCategories - État de chargement des catégories
  * @param {string} props.error - Message d'erreur
  * @param {Function} props.onRetry - Fonction pour réessayer le chargement
+ * @param {boolean} props.showAddButton - Afficher le bouton d'ajout (masqué pour les admins)
  */
 function InventoryContent({ 
   items = [], 
@@ -21,7 +22,8 @@ function InventoryContent({
   isLoading = false,
   isLoadingCategories = false,
   error = null,
-  onRetry
+  onRetry,
+  showAddButton = true
 }) {
   const navigate = useNavigate()
   const [searchQuery, setSearchQuery] = useState('')
@@ -49,8 +51,10 @@ function InventoryContent({
   // Filtrer les items
   const filteredItems = useMemo(() => {
     return items.filter(item => {
-      const matchesSearch = item.name.toLowerCase().includes(searchQuery.toLowerCase())
-      const matchesCategory = selectedCategory === 'Tout' || item.category === selectedCategory
+      // Vérifier que item.name existe avant d'appeler toLowerCase()
+      const itemName = item?.name || ''
+      const matchesSearch = itemName.toLowerCase().includes(searchQuery.toLowerCase())
+      const matchesCategory = selectedCategory === 'Tout' || (item?.category || '') === selectedCategory
       return matchesSearch && matchesCategory
     })
   }, [items, searchQuery, selectedCategory])
@@ -92,20 +96,22 @@ function InventoryContent({
               Mes Ingrédients
             </p>
             {/* Floating Action Button - Desktop only */}
-            <button
-              onClick={() => {
-                onAddItem?.()
-                navigate('/ajouter-item')
-              }}
-              className="hidden lg:flex h-16 w-16 xl:h-20 xl:w-20 items-center justify-center rounded-2xl bg-primary text-white shadow-fab cursor-pointer hover:opacity-90 transition-opacity"
-            >
-              <span
-                className="material-symbols-outlined text-4xl"
-                style={{ fontVariationSettings: "'wght' 500" }}
+            {showAddButton && (
+              <button
+                onClick={() => {
+                  onAddItem?.()
+                  navigate('/ajouter-item')
+                }}
+                className="hidden lg:flex h-16 w-16 xl:h-20 xl:w-20 items-center justify-center rounded-2xl bg-primary text-white shadow-fab cursor-pointer hover:opacity-90 transition-opacity"
               >
-                add
-              </span>
-            </button>
+                <span
+                  className="material-symbols-outlined text-4xl"
+                  style={{ fontVariationSettings: "'wght' 500" }}
+                >
+                  add
+                </span>
+              </button>
+            )}
           </div>
           
           {/* SearchBar */}
@@ -226,10 +232,10 @@ function InventoryContent({
                 </div>
                 <div className="flex flex-col justify-center">
                   <p className="text-text-light dark:text-text-dark text-base font-medium leading-normal line-clamp-1">
-                    {item.name}
+                    {item?.name || 'Ingrédient sans nom'}
                   </p>
                   <p className="text-text-secondary-light dark:text-text-secondary-dark text-sm font-normal leading-normal mt-1">
-                    {item.category}
+                    {item?.category || 'Autre'}
                   </p>
                 </div>
               </div>
@@ -270,20 +276,22 @@ function InventoryContent({
       </main>
 
       {/* Floating Action Button - Mobile/Tablet only */}
-      <button
-        onClick={() => {
-          onAddItem?.()
-          navigate('/ajouter-item')
-        }}
-        className="fixed lg:hidden bottom-28 right-4 md:bottom-6 md:right-6 z-[90] flex h-16 w-16 md:h-20 md:w-20 items-center justify-center rounded-2xl bg-primary text-white shadow-fab cursor-pointer hover:opacity-90 transition-opacity"
-      >
-        <span
-          className="material-symbols-outlined text-4xl"
-          style={{ fontVariationSettings: "'wght' 500" }}
+      {showAddButton && (
+        <button
+          onClick={() => {
+            onAddItem?.()
+            navigate('/ajouter-item')
+          }}
+          className="fixed lg:hidden bottom-28 right-4 md:bottom-6 md:right-6 z-[90] flex h-16 w-16 md:h-20 md:w-20 items-center justify-center rounded-2xl bg-primary text-white shadow-fab cursor-pointer hover:opacity-90 transition-opacity"
         >
-          add
-        </span>
-      </button>
+          <span
+            className="material-symbols-outlined text-4xl"
+            style={{ fontVariationSettings: "'wght' 500" }}
+          >
+            add
+          </span>
+        </button>
+      )}
     </div>
   )
 }

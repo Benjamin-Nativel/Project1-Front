@@ -5,9 +5,9 @@ import axiosInstance from '../axios'
  */
 export const inventoryService = {
   /**
-   * Récupérer tous les items de l'inventaire
+   * Récupérer tous les items de l'inventaire (tous les ingrédients + inventaire)
    * @param {Object} filters - { category, search }
-   * @returns {Promise<Array>} - Liste des items
+   * @returns {Promise<Array>} - Liste de tous les items avec leurs quantités
    */
   getItems: async (filters = {}) => {
     try {
@@ -16,6 +16,7 @@ export const inventoryService = {
       })
       
       // Transformer les données pour correspondre au format attendu par le frontend
+      // Utiliser tous les items (pas seulement client_items)
       const { items, inventory } = response.data
       
       // Créer un map pour les quantités par item_id
@@ -26,7 +27,7 @@ export const inventoryService = {
         })
       }
       
-      // Combiner les items avec leurs quantités
+      // Combiner tous les items avec leurs quantités
       const formattedItems = Array.isArray(items) ? items.map(item => ({
         id: item.id,
         name: item.name,
@@ -34,6 +35,61 @@ export const inventoryService = {
         emoji: item.img ? `📦` : '📦', // Utiliser l'image si disponible, sinon emoji par défaut
         quantity: quantityMap.get(item.id) || 0
       })) : []
+      
+      // Trier par quantité (décroissant : les items avec le plus de quantité en premier)
+      formattedItems.sort((a, b) => b.quantity - a.quantity)
+      
+      return formattedItems
+    } catch (error) {
+      throw error
+    }
+  },
+
+  /**
+   * Récupérer uniquement les items créés par l'utilisateur (client_items)
+   * client_items est un tableau d'IDs qui correspond aux items de la liste d'origine
+   * @param {Object} filters - { category, search }
+   * @returns {Promise<Array>} - Liste des items créés par l'utilisateur avec leurs quantités
+   */
+  getClientItems: async (filters = {}) => {
+    try {
+      const response = await axiosInstance.get('/api/inventories', {
+        params: filters,
+      })
+      
+      // Transformer les données pour correspondre au format attendu par le frontend
+      // client_items est un tableau d'IDs, pas un tableau d'objets complets
+      const { items, client_items, inventory } = response.data
+      
+      // Créer un Set pour une recherche rapide des IDs de client_items
+      const clientItemsIds = new Set()
+      if (Array.isArray(client_items)) {
+        client_items.forEach(id => {
+          clientItemsIds.add(id)
+        })
+      }
+      
+      // Créer un map pour les quantités par item_id
+      const quantityMap = new Map()
+      if (Array.isArray(inventory)) {
+        inventory.forEach(inv => {
+          quantityMap.set(inv.item_id, inv.quantity)
+        })
+      }
+      
+      // Filtrer les items pour ne garder que ceux dont l'ID est dans client_items
+      // Retourner tous les items dans client_items (même ceux avec quantité 0)
+      const formattedItems = Array.isArray(items) 
+        ? items
+            .filter(item => clientItemsIds.has(item.id))
+            .map(item => ({
+              id: item.id,
+              name: item.name,
+              category: item.category?.name || 'Autre',
+              emoji: item.img ? `📦` : '📦', // Utiliser l'image si disponible, sinon emoji par défaut
+              quantity: quantityMap.get(item.id) || 0
+            }))
+        : []
       
       // Trier par quantité (décroissant : les items avec le plus de quantité en premier)
       formattedItems.sort((a, b) => b.quantity - a.quantity)
