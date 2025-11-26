@@ -11,6 +11,13 @@ function RecipeResultPage() {
   
   // Récupérer les données de la recette depuis l'état de navigation ou les props
   const recipe = location.state?.recipe || null
+  
+  // Vérifier que les données sont bien reçues (pour débogage)
+  if (recipe) {
+    console.log('Données reçues dans RecipeResultPage:', recipe)
+  } else {
+    console.warn('Aucune donnée de recette trouvée dans location.state')
+  }
 
   const handleGenerateAnother = () => {
     // Navigation vers la page de génération de recette

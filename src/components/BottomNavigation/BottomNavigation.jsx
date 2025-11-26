@@ -1,4 +1,5 @@
-import { Link, useLocation } from 'react-router-dom'
+import { Link, useLocation, useNavigate } from 'react-router-dom'
+import { removeToken } from '../../utils/storage'
 
 /**
  * Composant BottomNavigation - Barre de navigation en bas (Mobile First)
@@ -7,6 +8,12 @@ import { Link, useLocation } from 'react-router-dom'
  */
 function BottomNavigation({ items = [] }) {
   const location = useLocation()
+  const navigate = useNavigate()
+
+  const handleLogout = () => {
+    removeToken()
+    navigate('/', { replace: true })
+  }
 
   const defaultItems = [
     {
@@ -26,7 +33,7 @@ function BottomNavigation({ items = [] }) {
   const navigationItems = items.length > 0 ? items : defaultItems
 
   return (
-    <nav className="fixed md:static bottom-0 left-0 right-0 z-50 mx-auto max-w-md md:max-w-full border-t md:border-t-0 md:border-r border-slate-200/50 dark:border-slate-700/50 bg-surface-light/80 dark:bg-surface-dark/80 backdrop-blur-sm md:w-20 lg:w-24 md:h-screen md:flex md:flex-col md:justify-start md:pt-8">
+    <nav className="fixed bottom-0 left-0 right-0 md:left-0 md:top-0 md:right-auto md:bottom-auto z-[9999] mx-auto max-w-md md:max-w-full border-t md:border-t-0 md:border-r border-slate-200/50 dark:border-slate-700/50 bg-surface-light dark:bg-surface-dark backdrop-blur-md md:w-20 lg:w-24 md:h-screen md:flex md:flex-col md:justify-start md:pt-8 shadow-lg md:shadow-none transform-gpu">
       <div className="flex md:flex-col h-20 md:h-auto md:w-full items-center justify-around md:justify-start md:gap-6 px-4 md:px-0">
         {navigationItems.map((item, index) => (
           <Link

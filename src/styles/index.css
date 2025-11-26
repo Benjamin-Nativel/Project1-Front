@@ -33,3 +33,15 @@ body.dark {
   width: 100%;
   min-height: 100vh;
 }
+
+/* Animations pour les erreurs de formulaire */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}

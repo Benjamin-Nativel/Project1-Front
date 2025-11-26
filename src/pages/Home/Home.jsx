@@ -1,5 +1,8 @@
-import { useState } from 'react'
-import { LoginForm } from '../../components'
+import { useState, useEffect } from 'react'
+import { useNavigate, useLocation } from 'react-router-dom'
+import { LoginForm, FlashMessage } from '../../components'
+import { authService } from '../../services/api'
+import { formatErrorMessage } from '../../utils/errors'
 
 /**
  * Page d'accueil
@@ -7,20 +10,46 @@ import { LoginForm } from '../../components'
  */
 function Home() {
   const [isLoading, setIsLoading] = useState(false)
+  const [error, setError] = useState(null)
+  const [flashMessage, setFlashMessage] = useState(null)
+  const navigate = useNavigate()
+  const location = useLocation()
+
+  // Récupérer le message flash depuis le state de navigation
+  useEffect(() => {
+    if (location.state?.message) {
+      setFlashMessage({
+        message: location.state.message,
+        type: 'success'
+      })
+      // Nettoyer le state pour éviter de réafficher le message au rechargement
+      window.history.replaceState({}, document.title)
+    }
+  }, [location])
 
   const handleLogin = async (formData) => {
     setIsLoading(true)
-    console.log('Tentative de connexion avec:', formData)
+    setError(null)
+    setFlashMessage(null)
     
-    // Simuler une requête API
     try {
-      // TODO: Remplacer par un appel API réel
-      // const response = await api.login(formData)
-      await new Promise(resolve => setTimeout(resolve, 1500))
-      console.log('Connexion réussie')
-      // Redirection ou gestion de la session ici
+      await authService.login(formData)
+      
+      // Afficher le message de succès
+      setFlashMessage({
+        message: 'Connexion réussie ! Redirection en cours...',
+        type: 'success'
+      })
+      
+      // Rediriger vers la page d'inventaire après un court délai pour voir le message
+      setTimeout(() => {
+        navigate('/inventaire', {
+          state: { message: 'Bienvenue ! Vous êtes maintenant connecté.' }
+        })
+      }, 500)
     } catch (error) {
-      console.error('Erreur de connexion:', error)
+      const errorMessage = formatErrorMessage(error)
+      setError(errorMessage)
     } finally {
       setIsLoading(false)
     }
@@ -28,7 +57,14 @@ function Home() {
 
   return (
     <div className="w-full min-h-screen bg-background-light dark:bg-background-dark">
-      <LoginForm onSubmit={handleLogin} isLoading={isLoading} />
+      {flashMessage && (
+        <FlashMessage
+          message={flashMessage.message}
+          type={flashMessage.type}
+          onClose={() => setFlashMessage(null)}
+        />
+      )}
+      <LoginForm onSubmit={handleLogin} isLoading={isLoading} error={error} />
     </div>
   )
 }

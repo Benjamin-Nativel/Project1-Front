@@ -1,6 +1,7 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import PageHeader from '../PageHeader'
+import { useCategories } from '../../hooks'
 
 /**
  * Composant AddItemForm - Formulaire d'ajout d'item (Mobile First)
@@ -10,16 +11,23 @@ import PageHeader from '../PageHeader'
  */
 function AddItemForm({ onSubmit, isLoading = false }) {
   const navigate = useNavigate()
+  const { categories, isLoading: isLoadingCategories } = useCategories()
   const [formData, setFormData] = useState({
     name: '',
     quantity: '',
-    category: 'Frais',
+    category: '',
     emoji: '📦'
   })
   const [errors, setErrors] = useState({})
   const [focusedField, setFocusedField] = useState(null)
 
-  const categories = ['Frais', 'Épicerie', 'Congelé', 'Boissons']
+  // Définir la catégorie par défaut une fois que les catégories sont chargées
+  useEffect(() => {
+    if (categories.length > 0 && !formData.category) {
+      const firstCategory = typeof categories[0] === 'string' ? categories[0] : categories[0].name
+      setFormData(prev => ({ ...prev, category: firstCategory }))
+    }
+  }, [categories, formData.category])
 
   const handleChange = (e) => {
     const { name, value } = e.target
@@ -185,13 +193,21 @@ function AddItemForm({ onSubmit, isLoading = false }) {
               onChange={handleChange}
               onFocus={() => setFocusedField('category')}
               onBlur={() => setFocusedField(null)}
-              disabled={isLoading}
+              disabled={isLoading || isLoadingCategories}
             >
-              {categories.map((category) => (
-                <option key={category} value={category}>
-                  {category}
-                </option>
-              ))}
+              {isLoadingCategories ? (
+                <option value="">Chargement des catégories...</option>
+              ) : (
+                categories.map((category) => {
+                  const categoryName = typeof category === 'string' ? category : category.name
+                  const categoryId = typeof category === 'object' ? category.id : category
+                  return (
+                    <option key={categoryId} value={categoryName}>
+                      {categoryName}
+                    </option>
+                  )
+                })
+              )}
             </select>
             {errors.category && (
               <span className="text-sm text-destructive mt-1 block">{errors.category}</span>
@@ -202,7 +218,7 @@ function AddItemForm({ onSubmit, isLoading = false }) {
           <div className="fixed md:absolute bottom-24 md:bottom-6 left-0 right-0 px-4 md:px-0 max-w-md md:max-w-lg lg:max-w-2xl xl:max-w-3xl mx-auto">
             <button
               type="submit"
-              disabled={isLoading}
+              disabled={isLoading || isLoadingCategories || categories.length === 0}
               className="w-full py-4 px-4 rounded-xl text-center font-bold bg-primary text-white text-lg disabled:opacity-60 disabled:cursor-not-allowed hover:opacity-90 transition-opacity"
             >
               {isLoading ? 'Ajout...' : 'Ajouter à l\'inventaire'}
