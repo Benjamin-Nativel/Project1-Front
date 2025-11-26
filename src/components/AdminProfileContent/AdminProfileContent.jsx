@@ -29,12 +29,12 @@ function AdminProfileContent() {
           description="Créer, modifier et supprimer des catégories"
           path="/admin/categories"
         />
-        <ProfileCard
+        {/* <ProfileCard
           icon="people"
           title="Gestion des Utilisateurs"
           description="Créer, modifier et supprimer des utilisateurs"
-          path="/admin/users"
-        />
+          // path="/admin/users"
+        /> */}
       </div>
     </div>
   )

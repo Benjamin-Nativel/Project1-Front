@@ -45,10 +45,13 @@ export const clearAuth = () => {
   removeToken()
   // Supprimer les données utilisateur
   removeUser()
-  // Nettoyer aussi le cache de l'inventaire, des client_items et des catégories lors de la déconnexion
+  // Nettoyer aussi le cache de l'inventaire, des client_items, des catégories et des données admin lors de la déconnexion
   clearInventoryCache()
   clearClientItemsCache()
   clearCategoriesCache()
+  clearAdminItemsCache()
+  clearAdminCategoriesCache()
+  clearAdminUsersCache()
 }
 
 /**
@@ -187,6 +190,144 @@ export const setClientItemsCache = (data) => {
 export const clearClientItemsCache = () => {
   localStorage.removeItem(CLIENT_ITEMS_CACHE_KEY)
   localStorage.removeItem(CLIENT_ITEMS_CACHE_TIMESTAMP_KEY)
+}
+
+/**
+ * Cache des items admin (tous les ingrédients pour l'admin)
+ */
+const ADMIN_ITEMS_CACHE_KEY = 'admin_items_cache'
+const ADMIN_ITEMS_CACHE_TIMESTAMP_KEY = 'admin_items_cache_timestamp'
+const ADMIN_ITEMS_CACHE_DURATION = 5 * 60 * 1000 // 5 minutes
+
+export const getAdminItemsCache = () => {
+  const cacheData = localStorage.getItem(ADMIN_ITEMS_CACHE_KEY)
+  const timestamp = localStorage.getItem(ADMIN_ITEMS_CACHE_TIMESTAMP_KEY)
+  
+  if (!cacheData || !timestamp) {
+    return null
+  }
+  
+  const now = Date.now()
+  const cacheAge = now - parseInt(timestamp, 10)
+  
+  // Vérifier si le cache est encore valide
+  if (cacheAge > ADMIN_ITEMS_CACHE_DURATION) {
+    clearAdminItemsCache()
+    return null
+  }
+  
+  try {
+    return JSON.parse(cacheData)
+  } catch (error) {
+    clearAdminItemsCache()
+    return null
+  }
+}
+
+export const setAdminItemsCache = (data) => {
+  try {
+    localStorage.setItem(ADMIN_ITEMS_CACHE_KEY, JSON.stringify(data))
+    localStorage.setItem(ADMIN_ITEMS_CACHE_TIMESTAMP_KEY, Date.now().toString())
+  } catch (error) {
+    console.error('Erreur lors de la sauvegarde du cache admin items:', error)
+  }
+}
+
+export const clearAdminItemsCache = () => {
+  localStorage.removeItem(ADMIN_ITEMS_CACHE_KEY)
+  localStorage.removeItem(ADMIN_ITEMS_CACHE_TIMESTAMP_KEY)
+}
+
+/**
+ * Cache des catégories admin (toutes les catégories pour l'admin)
+ */
+const ADMIN_CATEGORIES_CACHE_KEY = 'admin_categories_cache'
+const ADMIN_CATEGORIES_CACHE_TIMESTAMP_KEY = 'admin_categories_cache_timestamp'
+const ADMIN_CATEGORIES_CACHE_DURATION = 5 * 60 * 1000 // 5 minutes
+
+export const getAdminCategoriesCache = () => {
+  const cacheData = localStorage.getItem(ADMIN_CATEGORIES_CACHE_KEY)
+  const timestamp = localStorage.getItem(ADMIN_CATEGORIES_CACHE_TIMESTAMP_KEY)
+  
+  if (!cacheData || !timestamp) {
+    return null
+  }
+  
+  const now = Date.now()
+  const cacheAge = now - parseInt(timestamp, 10)
+  
+  // Vérifier si le cache est encore valide
+  if (cacheAge > ADMIN_CATEGORIES_CACHE_DURATION) {
+    clearAdminCategoriesCache()
+    return null
+  }
+  
+  try {
+    return JSON.parse(cacheData)
+  } catch (error) {
+    clearAdminCategoriesCache()
+    return null
+  }
+}
+
+export const setAdminCategoriesCache = (data) => {
+  try {
+    localStorage.setItem(ADMIN_CATEGORIES_CACHE_KEY, JSON.stringify(data))
+    localStorage.setItem(ADMIN_CATEGORIES_CACHE_TIMESTAMP_KEY, Date.now().toString())
+  } catch (error) {
+    console.error('Erreur lors de la sauvegarde du cache admin categories:', error)
+  }
+}
+
+export const clearAdminCategoriesCache = () => {
+  localStorage.removeItem(ADMIN_CATEGORIES_CACHE_KEY)
+  localStorage.removeItem(ADMIN_CATEGORIES_CACHE_TIMESTAMP_KEY)
+}
+
+/**
+ * Cache des utilisateurs admin (tous les utilisateurs pour l'admin)
+ */
+const ADMIN_USERS_CACHE_KEY = 'admin_users_cache'
+const ADMIN_USERS_CACHE_TIMESTAMP_KEY = 'admin_users_cache_timestamp'
+const ADMIN_USERS_CACHE_DURATION = 5 * 60 * 1000 // 5 minutes
+
+export const getAdminUsersCache = () => {
+  const cacheData = localStorage.getItem(ADMIN_USERS_CACHE_KEY)
+  const timestamp = localStorage.getItem(ADMIN_USERS_CACHE_TIMESTAMP_KEY)
+  
+  if (!cacheData || !timestamp) {
+    return null
+  }
+  
+  const now = Date.now()
+  const cacheAge = now - parseInt(timestamp, 10)
+  
+  // Vérifier si le cache est encore valide
+  if (cacheAge > ADMIN_USERS_CACHE_DURATION) {
+    clearAdminUsersCache()
+    return null
+  }
+  
+  try {
+    return JSON.parse(cacheData)
+  } catch (error) {
+    clearAdminUsersCache()
+    return null
+  }
+}
+
+export const setAdminUsersCache = (data) => {
+  try {
+    localStorage.setItem(ADMIN_USERS_CACHE_KEY, JSON.stringify(data))
+    localStorage.setItem(ADMIN_USERS_CACHE_TIMESTAMP_KEY, Date.now().toString())
+  } catch (error) {
+    console.error('Erreur lors de la sauvegarde du cache admin users:', error)
+  }
+}
+
+export const clearAdminUsersCache = () => {
+  localStorage.removeItem(ADMIN_USERS_CACHE_KEY)
+  localStorage.removeItem(ADMIN_USERS_CACHE_TIMESTAMP_KEY)
 }
 
 

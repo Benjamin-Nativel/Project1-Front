@@ -8,6 +8,7 @@ export { default as recipesService } from './recipes'
 export { default as categoriesService } from './categories'
 export { default as itemsService } from './items'
 export { default as clientService } from './client'
+export { default as usersService } from './users'
 
 // Export par défaut de tous les services
 import authService from './auth'
@@ -16,6 +17,7 @@ import recipesService from './recipes'
 import categoriesService from './categories'
 import itemsService from './items'
 import clientService from './client'
+import usersService from './users'
 
 const api = {
   auth: authService,
@@ -24,6 +26,7 @@ const api = {
   categories: categoriesService,
   items: itemsService,
   client: clientService,
+  users: usersService,
 }
 
 export default api
