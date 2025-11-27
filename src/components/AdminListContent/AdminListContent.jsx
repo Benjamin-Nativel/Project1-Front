@@ -1,5 +1,6 @@
 import { useState, useMemo } from 'react'
 import PageHeader from '../PageHeader'
+import ConfirmDialog from '../ConfirmDialog'
 
 /**
  * Composant ItemImage - Affiche l'image d'un item avec fallback sur emoji
@@ -68,6 +69,7 @@ function AdminListContent({
   const [searchQuery, setSearchQuery] = useState('')
   const [isSheetOpen, setIsSheetOpen] = useState(false)
   const [editingItem, setEditingItem] = useState(null)
+  const [deleteDialog, setDeleteDialog] = useState({ isOpen: false, itemId: null })
 
   // Filtrer les items par recherche
   const filteredItems = useMemo(() => {
@@ -91,10 +93,19 @@ function AdminListContent({
     setIsSheetOpen(true)
   }
 
-  const handleDeleteClick = async (itemId) => {
-    if (window.confirm(deleteConfirmMessage)) {
-      await onDeleteItem?.(itemId)
+  const handleDeleteClick = (itemId) => {
+    setDeleteDialog({ isOpen: true, itemId })
+  }
+
+  const handleDeleteConfirm = async () => {
+    if (deleteDialog.itemId) {
+      await onDeleteItem?.(deleteDialog.itemId)
+      setDeleteDialog({ isOpen: false, itemId: null })
     }
+  }
+
+  const handleDeleteCancel = () => {
+    setDeleteDialog({ isOpen: false, itemId: null })
   }
 
   const handleSheetClose = () => {
@@ -241,33 +252,37 @@ function AdminListContent({
         )}
       </main>
 
-      {/* Floating Action Button */}
-      <button
-        onClick={handleCreateClick}
-        className="fixed lg:hidden bottom-28 right-4 md:bottom-6 md:right-6 z-[90] flex h-16 w-16 md:h-20 md:w-20 items-center justify-center rounded-2xl bg-primary text-white shadow-fab cursor-pointer hover:opacity-90 transition-opacity"
-        aria-label={createButtonLabel}
-      >
-        <span
-          className="material-symbols-outlined text-4xl"
-          style={{ fontVariationSettings: "'wght' 500" }}
+      {/* Floating Action Button - Caché quand le formulaire est ouvert */}
+      {!isSheetOpen && (
+        <button
+          onClick={handleCreateClick}
+          className="fixed lg:hidden bottom-28 right-4 md:bottom-6 md:right-6 z-[90] flex h-16 w-16 md:h-20 md:w-20 items-center justify-center rounded-2xl bg-primary text-white shadow-fab cursor-pointer hover:opacity-90 transition-opacity"
+          aria-label={createButtonLabel}
         >
-          add
-        </span>
-      </button>
+          <span
+            className="material-symbols-outlined text-4xl"
+            style={{ fontVariationSettings: "'wght' 500" }}
+          >
+            add
+          </span>
+        </button>
+      )}
 
-      {/* Floating Action Button - Desktop */}
-      <button
-        onClick={handleCreateClick}
-        className="hidden lg:flex absolute bottom-24 right-4 xl:right-8 z-40 h-16 w-16 xl:h-20 xl:w-20 items-center justify-center rounded-2xl bg-primary text-white shadow-fab cursor-pointer hover:opacity-90 transition-opacity"
-        aria-label={createButtonLabel}
-      >
-        <span
-          className="material-symbols-outlined text-4xl"
-          style={{ fontVariationSettings: "'wght' 500" }}
+      {/* Floating Action Button - Desktop - Caché quand le formulaire est ouvert */}
+      {!isSheetOpen && (
+        <button
+          onClick={handleCreateClick}
+          className="hidden lg:flex absolute bottom-24 right-4 xl:right-8 z-40 h-16 w-16 xl:h-20 xl:w-20 items-center justify-center rounded-2xl bg-primary text-white shadow-fab cursor-pointer hover:opacity-90 transition-opacity"
+          aria-label={createButtonLabel}
         >
-          add
-        </span>
-      </button>
+          <span
+            className="material-symbols-outlined text-4xl"
+            style={{ fontVariationSettings: "'wght' 500" }}
+          >
+            add
+          </span>
+        </button>
+      )}
 
       {/* Bottom Sheet for Create/Edit */}
       {FormSheet && (
@@ -279,6 +294,18 @@ function AdminListContent({
           isLoading={isLoading}
         />
       )}
+
+      {/* Confirm Dialog for Delete */}
+      <ConfirmDialog
+        isOpen={deleteDialog.isOpen}
+        onClose={handleDeleteCancel}
+        onConfirm={handleDeleteConfirm}
+        title="Confirmation de suppression"
+        message={deleteConfirmMessage}
+        confirmLabel="Supprimer"
+        cancelLabel="Annuler"
+        confirmButtonType="destructive"
+      />
     </div>
   )
 }
