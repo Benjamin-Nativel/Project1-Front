@@ -2,6 +2,30 @@ import { useState, useMemo } from 'react'
 import PageHeader from '../PageHeader'
 
 /**
+ * Composant ItemImage - Affiche l'image d'un item avec fallback sur emoji
+ */
+function ItemImage({ imgUrl, emoji, alt }) {
+  const [imageError, setImageError] = useState(false)
+  
+  if (!imgUrl || imageError) {
+    return (
+      <span className="text-4xl">
+        {emoji || '📦'}
+      </span>
+    )
+  }
+  
+  return (
+    <img
+      src={imgUrl}
+      alt={alt || 'Item'}
+      className="w-full h-full object-cover"
+      onError={() => setImageError(true)}
+    />
+  )
+}
+
+/**
  * Composant AdminListContent - Composant générique pour la gestion admin (ingrédients, catégories, etc.)
  * @param {Object} props
  * @param {Array} props.items - Tableau d'items
@@ -95,8 +119,12 @@ function AdminListContent({
       data-name={item.name?.toLowerCase() || ''}
     >
       <div className="flex items-center gap-4 flex-1">
-        <div className="text-4xl flex items-center justify-center rounded-lg bg-background-light dark:bg-background-dark shrink-0 size-14">
-          <span>{item.emoji || item.img || '📦'}</span>
+        <div className="flex items-center justify-center rounded-lg bg-background-light dark:bg-background-dark shrink-0 size-14 overflow-hidden">
+          <ItemImage
+            imgUrl={item.imgUrl}
+            emoji={item.emoji || '📦'}
+            alt={item.name || 'Item'}
+          />
         </div>
         <div className="flex flex-col justify-center flex-1">
           <p className="text-text-light dark:text-text-dark text-base font-medium leading-normal line-clamp-1">

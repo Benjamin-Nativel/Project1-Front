@@ -2,6 +2,30 @@ import { useState, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
 
 /**
+ * Composant ItemImage - Affiche l'image d'un item avec fallback sur emoji
+ */
+function ItemImage({ imgUrl, emoji, alt }) {
+  const [imageError, setImageError] = useState(false)
+  
+  if (!imgUrl || imageError) {
+    return (
+      <span className="text-4xl">
+        {emoji || '📦'}
+      </span>
+    )
+  }
+  
+  return (
+    <img
+      src={imgUrl}
+      alt={alt || 'Ingrédient'}
+      className="w-full h-full object-cover"
+      onError={() => setImageError(true)}
+    />
+  )
+}
+
+/**
  * Composant InventoryContent - Contenu de la page d'inventaire (Mobile First)
  * @param {Object} props
  * @param {Array} props.items - Tableau d'items de l'inventaire
@@ -227,8 +251,12 @@ function InventoryContent({
                 className="flex items-center gap-4 bg-surface-light dark:bg-surface-dark p-4 md:p-5 lg:p-6 min-h-[72px] md:min-h-[80px] justify-between rounded-xl shadow-soft dark:shadow-none"
               >
               <div className="flex items-center gap-4">
-                <div className="text-4xl flex items-center justify-center rounded-lg bg-background-light dark:bg-background-dark shrink-0 size-14">
-                  <span>{item.emoji || '📦'}</span>
+                <div className="flex items-center justify-center rounded-lg bg-background-light dark:bg-background-dark shrink-0 size-14 overflow-hidden">
+                  <ItemImage
+                    imgUrl={item.imgUrl}
+                    emoji={item.emoji || '📦'}
+                    alt={item?.name || 'Ingrédient'}
+                  />
                 </div>
                 <div className="flex flex-col justify-center">
                   <p className="text-text-light dark:text-text-dark text-base font-medium leading-normal line-clamp-1">
