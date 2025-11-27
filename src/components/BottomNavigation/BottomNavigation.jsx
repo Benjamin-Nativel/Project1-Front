@@ -29,6 +29,12 @@ function BottomNavigation({ items = [] }) {
       isActive: location.pathname === '/recipes'
     },
     {
+      path: '/communaute',
+      icon: 'groups',
+      label: 'Communauté',
+      isActive: location.pathname === '/communaute'
+    },
+    {
       path: '/profil',
       icon: 'person',
       label: 'Profil',
@@ -47,8 +53,8 @@ function BottomNavigation({ items = [] }) {
             to={item.path}
             className={`flex flex-col items-center justify-center gap-1 transition-colors ${
               item.isActive || location.pathname === item.path
-                ? 'text-primary'
-                : 'text-text-secondary-light dark:text-text-secondary-dark'
+                ? 'text-green-600 dark:text-green-500'
+                : 'text-gray-500 dark:text-gray-400'
             }`}
           >
             <span
