@@ -78,6 +78,62 @@ export const recipesService = {
       throw error
     }
   },
+
+  /**
+   * Récupérer les recettes partagées par la communauté
+   * @returns {Promise<Array>} - Liste des recettes de la communauté
+   */
+  getCommunityRecipes: async () => {
+    try {
+      const response = await axiosInstance.get('/recipes/community')
+      return response.data
+    } catch (error) {
+      throw error
+    }
+  },
+
+  /**
+   * Récupérer les recettes créées par l'utilisateur
+   * @returns {Promise<Array>} - Liste des recettes de l'utilisateur
+   */
+  getUserRecipes: async () => {
+    try {
+      const response = await axiosInstance.get('/recipes/user')
+      return response.data
+    } catch (error) {
+      throw error
+    }
+  },
+
+  /**
+   * Récupérer les recettes favorites de l'utilisateur
+   * @returns {Promise<Array>} - Liste des recettes favorites
+   */
+  getFavorites: async () => {
+    try {
+      const response = await axiosInstance.get('/recipes/favorites')
+      return response.data
+    } catch (error) {
+      throw error
+    }
+  },
+
+  /**
+   * Ajouter/retirer une recette des favoris
+   * @param {string|number} recipeId - ID de la recette
+   * @param {boolean} isFavorited - État favori souhaité
+   * @returns {Promise<Object>} - Résultat de l'opération
+   */
+  toggleFavorite: async (recipeId, isFavorited) => {
+    try {
+      const response = await axiosInstance.post(`/recipes/${recipeId}/favorite`, {
+        isFavorited,
+      })
+      return response.data
+    } catch (error) {
+      throw error
+    }
+  },
 }
 
 export default recipesService

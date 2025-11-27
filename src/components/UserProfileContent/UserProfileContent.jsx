@@ -87,7 +87,7 @@ function UserProfileContent() {
             {' '}recettes générées
           </span>
         }
-        path="/recipes"
+        path="/mes-recettes"
       />
     </div>
   )

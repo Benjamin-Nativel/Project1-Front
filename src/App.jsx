@@ -11,6 +11,9 @@ import Profile from './pages/Profile'
 import AdminIngredients from './pages/AdminIngredients'
 import AdminCategories from './pages/AdminCategories'
 import AdminUsers from './pages/AdminUsers'
+import Community from './pages/Community'
+import Favorites from './pages/Favorites'
+import MyRecipes from './pages/MyRecipes'
 import ProtectedRoute from './components/ProtectedRoute'
 import PublicRoute from './components/PublicRoute'
 import { routes } from './config/routes'
@@ -120,6 +123,30 @@ function App() {
           element={
             <ProtectedRoute>
               <AdminUsers />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path={routes.COMMUNITY}
+          element={
+            <ProtectedRoute>
+              <Community />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path={routes.FAVORITES}
+          element={
+            <ProtectedRoute>
+              <Favorites />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path={routes.MY_RECIPES}
+          element={
+            <ProtectedRoute>
+              <MyRecipes />
             </ProtectedRoute>
           }
         />

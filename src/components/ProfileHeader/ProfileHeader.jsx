@@ -46,7 +46,7 @@ function ProfileHeader() {
           className="flex items-center gap-2 px-4 py-2 bg-red-500 hover:bg-red-600 text-white rounded-lg transition-colors"
         >
           <span className="material-symbols-outlined text-lg">logout</span>
-          <span className="text-sm font-medium">Déconnexion</span>
+          
         </button>
       </div>
     </header>
