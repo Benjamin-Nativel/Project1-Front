@@ -4,6 +4,7 @@ import { AddItemForm, BottomNavigation, FlashMessage } from '../../components'
 import { itemsService } from '../../services/api/items'
 import { formatErrorMessage } from '../../utils/errors'
 import { getInventoryCache, setInventoryCache } from '../../utils/storage'
+import { getItemImageUrl } from '../../utils/constants'
 
 /**
  * Page d'ajout d'item
@@ -23,14 +24,16 @@ function AddItem() {
       const response = await itemsService.createItem(itemData)
       
       // Transformer la réponse de l'API en format compatible avec le cache
-      // Le format attendu par le cache est: { id, name, category, emoji, quantity }
+      // Le format attendu par le cache est: { id, name, category, emoji, img, imgUrl, quantity }
       // D'après la doc API, la réponse contient: { message, item: { id, name, category (string), img } }
       if (response.item) {
         const newItem = {
           id: response.item.id,
           name: response.item.name,
           category: response.item.category || 'Autre', // La réponse contient déjà le nom de la catégorie (string)
-          emoji: response.item.img ? '📦' : '📦', // Utiliser l'emoji par défaut (on pourrait améliorer avec l'image plus tard)
+          emoji: '📦', // Emoji par défaut (utilisé comme fallback si pas d'image)
+          img: response.item.img || null, // Nom du fichier image (ex: "apples-647df8a.jpg")
+          imgUrl: getItemImageUrl(response.item.img), // URL complète de l'image ou null
           quantity: 0 // Nouvel item créé, quantité initiale à 0 (pas encore dans l'inventaire)
         }
         

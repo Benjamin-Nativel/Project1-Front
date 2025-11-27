@@ -1,4 +1,5 @@
 import axiosInstance from '../axios'
+import { getItemImageUrl } from '../../utils/constants'
 
 /**
  * Service API pour la gestion de l'inventaire
@@ -32,7 +33,9 @@ export const inventoryService = {
         id: item.id,
         name: item.name,
         category: item.category?.name || 'Autre',
-        emoji: item.img ? `📦` : '📦', // Utiliser l'image si disponible, sinon emoji par défaut
+        emoji: '📦', // Emoji par défaut (utilisé comme fallback si pas d'image)
+        img: item.img || null, // Nom du fichier image (ex: "apples-647df8a.jpg")
+        imgUrl: getItemImageUrl(item.img), // URL complète de l'image ou null
         quantity: quantityMap.get(item.id) || 0
       })) : []
       
@@ -86,7 +89,9 @@ export const inventoryService = {
               id: item.id,
               name: item.name,
               category: item.category?.name || 'Autre',
-              emoji: item.img ? `📦` : '📦', // Utiliser l'image si disponible, sinon emoji par défaut
+              emoji: '📦', // Emoji par défaut (utilisé comme fallback si pas d'image)
+              img: item.img || null, // Nom du fichier image (ex: "apples-647df8a.jpg")
+              imgUrl: getItemImageUrl(item.img), // URL complète de l'image ou null
               quantity: quantityMap.get(item.id) || 0
             }))
         : []

@@ -1,4 +1,5 @@
 import axiosInstance from '../axios'
+import { getItemImageUrl } from '../../utils/constants'
 
 /**
  * Service API pour la gestion des items
@@ -42,18 +43,6 @@ export const itemsService = {
         formData.append('image', itemData.image)
       }
       
-      // Debug: Vérifier le contenu du FormData
-      console.log('=== FormData Debug ===')
-      console.log('Data JSON:', dataString)
-      for (let [key, value] of formData.entries()) {
-        if (value instanceof File) {
-          console.log(`${key}:`, value.name, `(${value.size} bytes, ${value.type})`)
-        } else {
-          console.log(`${key}:`, value, `(type: ${typeof value})`)
-        }
-      }
-      console.log('=====================')
-      
       // Faire la requête avec FormData
       // IMPORTANT: Ne pas définir manuellement le Content-Type
       // Le navigateur doit le définir automatiquement avec le boundary approprié
@@ -62,18 +51,8 @@ export const itemsService = {
       
       return response.data
     } catch (error) {
-      // Debug: Afficher les détails de l'erreur
-      if (error.response) {
-        console.error('=== API Error ===')
-        console.error('Status:', error.response.status)
-        console.error('Data:', error.response.data)
-        console.error('Headers:', error.response.headers)
-        console.error('================')
-      } else if (error.request) {
-        console.error('Request error:', error.request)
-      } else {
-        console.error('Error:', error.message)
-      }
+      // La gestion des erreurs est faite par l'intercepteur axios
+      // On propage simplement l'erreur pour que le composant puisse la gérer
       throw error
     }
   },
@@ -93,8 +72,9 @@ export const itemsService = {
         id: item.id,
         name: item.name,
         category: item.category?.name || 'Autre',
-        emoji: item.img || '📦',
-        img: item.img
+        emoji: '📦', // Emoji par défaut (utilisé comme fallback si pas d'image)
+        img: item.img || null, // Nom du fichier image (ex: "apples-647df8a.jpg")
+        imgUrl: getItemImageUrl(item.img) // URL complète de l'image ou null
       })) : []
     } catch (error) {
       throw error
