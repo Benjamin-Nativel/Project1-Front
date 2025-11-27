@@ -57,14 +57,14 @@ export const formatErrorMessage = (error) => {
         }
         return 'Données invalides'
       case 409:
-        // Conflit - email déjà utilisé
-        if (data.error) {
-          return data.error
-        }
+        // Conflit - ressource déjà existante (email, catégorie, etc.)
         if (data.message) {
           return data.message
         }
-        return 'Cet email est déjà utilisé'
+        if (data.error) {
+          return data.error
+        }
+        return 'Cette ressource existe déjà'
       case 401:
         // Gérer les messages spécifiques de l'API Symfony
         if (data.message === 'Invalid credentials.') {

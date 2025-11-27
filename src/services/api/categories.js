@@ -33,14 +33,19 @@ export const categoriesService = {
   },
 
   /**
-   * Créer une nouvelle catégorie
+   * Créer une nouvelle catégorie (admin uniquement)
    * @param {Object} categoryData - { name }
    * @param {string} categoryData.name - Nom de la catégorie
-   * @returns {Promise<Object>} - Catégorie créée
+   * @returns {Promise<Object>} - Catégorie créée avec { message, category: { id, name } }
    */
   createCategory: async (categoryData) => {
     try {
-      const response = await axiosInstance.post('/api/categories', {
+      // Vérifier que les données sont valides
+      if (!categoryData.name || categoryData.name.trim() === '') {
+        throw new Error('Le nom de la catégorie est requis')
+      }
+      
+      const response = await axiosInstance.post('/api/admin/category/add', {
         name: categoryData.name.trim()
       })
       return response.data
@@ -50,37 +55,40 @@ export const categoriesService = {
   },
 
   /**
-   * Mettre à jour une catégorie
+   * Mettre à jour une catégorie (admin uniquement)
    * @param {number} categoryId - ID de la catégorie
    * @param {Object} categoryData - { name }
-   * @returns {Promise<Object>} - Catégorie mise à jour
+   * @param {string} categoryData.name - Nouveau nom de la catégorie (optionnel)
+   * @returns {Promise<Object>} - Catégorie mise à jour avec { message, category: { id, name } }
    */
   updateCategory: async (categoryId, categoryData) => {
     try {
-      const response = await axiosInstance.put(`/api/categories/${categoryId}`, {
-        name: categoryData.name.trim()
+      // Vérifier que les données sont valides si name est fourni
+      if (categoryData.name !== undefined && categoryData.name !== null) {
+        if (categoryData.name.trim() === '') {
+          throw new Error('Le nom de la catégorie ne peut pas être vide')
+        }
+      }
+      
+      // L'API utilise PATCH pour la mise à jour
+      const response = await axiosInstance.patch(`/api/admin/category/update/${categoryId}`, {
+        name: categoryData.name ? categoryData.name.trim() : undefined
       })
       return response.data
     } catch (error) {
-      // Si l'endpoint PUT n'existe pas, essayer POST
-      if (error.response?.status === 404 || error.response?.status === 405) {
-        const response = await axiosInstance.post(`/api/categories/update/${categoryId}`, {
-          name: categoryData.name.trim()
-        })
-        return response.data
-      }
       throw error
     }
   },
 
   /**
-   * Supprimer une catégorie
+   * Supprimer une catégorie (admin uniquement)
    * @param {number} categoryId - ID de la catégorie
-   * @returns {Promise<void>}
+   * @returns {Promise<Object>} - Réponse avec { message }
    */
   deleteCategory: async (categoryId) => {
     try {
-      await axiosInstance.delete(`/api/categories/${categoryId}`)
+      const response = await axiosInstance.delete(`/api/admin/category/delete/${categoryId}`)
+      return response.data
     } catch (error) {
       throw error
     }
