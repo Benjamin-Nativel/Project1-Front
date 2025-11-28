@@ -26,20 +26,22 @@ function Recipes() {
       console.log('Données reçues de l\'API:', recipeData)
       
       // Transformer les données de l'API au format attendu par RecipeResult
-      // On passe toutes les données de l'API pour ne rien perdre
+      // L'API retourne: name, description, matching, preparation_time, ingredients, steps, cache_key
       const formattedRecipe = {
-        recipe_name: recipeData.recipe_name,
-        matching_score: recipeData.matching_score !== undefined ? recipeData.matching_score : null,
-        preparation_time_minutes: recipeData.preparation_time_minutes,
+        // Mapper les nouveaux noms de champs vers les anciens pour compatibilité
+        recipe_name: recipeData.name || recipeData.recipe_name,
+        name: recipeData.name,
+        description: recipeData.description,
+        matching_score: recipeData.matching !== undefined ? recipeData.matching : null,
+        matching: recipeData.matching,
+        preparation_time_minutes: recipeData.preparation_time || recipeData.preparation_time_minutes,
+        preparation_time: recipeData.preparation_time,
         ingredients: recipeData.ingredients || [],
         steps: recipeData.steps || [],
+        cache_key: recipeData.cache_key, // Important pour la sauvegarde
         // Passer toutes les autres propriétés de l'API si elles existent
-        ...(recipeData.id && { id: recipeData.id }),
-        ...(recipeData.category && { category: recipeData.category }),
-        ...(recipeData.description && { description: recipeData.description }),
-        // Ajouter toutes les autres propriétés non listées
         ...Object.keys(recipeData).reduce((acc, key) => {
-          if (!['recipe_name', 'matching_score', 'preparation_time_minutes', 'ingredients', 'steps'].includes(key)) {
+          if (!['name', 'description', 'matching', 'preparation_time', 'ingredients', 'steps', 'cache_key'].includes(key)) {
             acc[key] = recipeData[key]
           }
           return acc
@@ -47,7 +49,6 @@ function Recipes() {
       }
       
       console.log('Données formatées pour RecipeResult:', formattedRecipe)
-      console.log('Matching score dans formattedRecipe:', formattedRecipe.matching_score, 'Type:', typeof formattedRecipe.matching_score)
       
       // Naviguer vers la page de résultat avec les données de la recette
       navigate(routes.RECIPE_RESULT, { state: { recipe: formattedRecipe } })

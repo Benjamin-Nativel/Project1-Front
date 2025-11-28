@@ -3,6 +3,8 @@ import { useNavigate } from 'react-router-dom'
 import { BottomNavigation, MyRecipeCard, FlashMessage, PageHeader } from '../../components'
 import { recipesService } from '../../services/api'
 import { formatErrorMessage } from '../../utils/errors'
+import { transformRecipeFromAPI } from '../../utils'
+import { getUserRecipesCache, setUserRecipesCache, clearUserRecipesCache } from '../../utils/storage'
 import { routes } from '../../config/routes'
 
 /**
@@ -14,95 +16,46 @@ function MyRecipes() {
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState(null)
   const [flashMessage, setFlashMessage] = useState(null)
+  const [offset, setOffset] = useState(0)
+  const [hasMore, setHasMore] = useState(true)
 
-  // Charger les recettes de l'utilisateur
+  // Charger les recettes de l'utilisateur (mode: 'author')
   useEffect(() => {
-    loadUserRecipes()
+    loadUserRecipes(true)
   }, [])
 
-  const loadUserRecipes = async () => {
+  const loadUserRecipes = async (reset = false) => {
     try {
       setIsLoading(true)
       setError(null)
 
-      // TODO: Remplacer par l'appel API réel quand l'endpoint sera disponible
-      // const data = await recipesService.getUserRecipes()
-      
-      // Données mockées pour le moment (basées sur la maquette)
-      const mockRecipes = [
-        {
-          id: 1,
-          recipe_name: 'Creamy Chicken & Broccoli Rice',
-          name: 'Creamy Chicken & Broccoli Rice',
-          created_at: '2024-01-15',
-          preparation_time_minutes: 30,
-          ingredients: [
-            '2 poitrines de poulet désossées et sans peau, coupées en dés',
-            '1 tasse de riz blanc',
-            '1 tête de brocoli, coupée en fleurettes',
-            '1 tasse de crème épaisse',
-            '1/2 tasse de parmesan râpé',
-            '2 gousses d\'ail, hachées',
-            'Sel et poivre au goût',
-          ],
-          steps: [
-            "Cuire le riz selon les instructions sur l'emballage. Pendant qu'il cuit, assaisonner le poulet coupé en dés avec du sel et du poivre.",
-            "Dans une grande poêle, cuire le poulet à feu moyen-élevé jusqu'à ce qu'il soit doré et cuit. Retirer et réserver.",
-            "Dans la même poêle, faire revenir l'ail haché pendant environ 30 secondes. Ajouter les fleurettes de brocoli et cuire jusqu'à ce qu'elles soient tendres mais encore croquantes.",
-            "Réduire le feu à doux, verser la crème épaisse et porter à ébullition. Incorporer le parmesan jusqu'à ce qu'il soit fondu et que la sauce ait légèrement épaissi.",
-            "Remettre le poulet dans la poêle. Ajouter le riz cuit et mélanger le tout jusqu'à ce que tout soit bien combiné et chaud. Assaisonner avec du sel et du poivre supplémentaires si nécessaire. Servir immédiatement.",
-          ],
-        },
-        {
-          id: 2,
-          recipe_name: 'Salade de Quinoa aux Légumes',
-          name: 'Salade de Quinoa aux Légumes',
-          created_at: '2024-01-12',
-          preparation_time_minutes: 20,
-          ingredients: [
-            '1 tasse de quinoa',
-            '2 tomates, coupées en dés',
-            '1 concombre, coupé en dés',
-            '1 poivron rouge, coupé en dés',
-            '1/4 tasse d\'huile d\'olive',
-            '2 cuillères à soupe de vinaigre de cidre',
-            'Sel et poivre au goût',
-          ],
-          steps: [
-            "Cuire le quinoa selon les instructions sur l'emballage. Laisser refroidir.",
-            "Couper tous les légumes en dés de taille uniforme.",
-            "Mélanger l'huile d'olive et le vinaigre dans un petit bol pour faire la vinaigrette.",
-            "Dans un grand saladier, mélanger le quinoa refroidi avec tous les légumes.",
-            "Verser la vinaigrette sur la salade et mélanger délicatement. Assaisonner avec du sel et du poivre. Servir frais.",
-          ],
-        },
-        {
-          id: 3,
-          recipe_name: 'Lasagnes Maison',
-          name: 'Lasagnes Maison',
-          created_at: '2024-01-10',
-          preparation_time_minutes: 60,
-          ingredients: [
-            '12 feuilles de pâtes à lasagnes',
-            '500g de viande hachée',
-            '400g de sauce tomate',
-            '300g de fromage râpé',
-            '200g de béchamel',
-            '1 oignon, haché',
-            '2 gousses d\'ail, hachées',
-            'Sel, poivre, origan',
-          ],
-          steps: [
-            "Préchauffer le four à 180°C. Faire revenir l'oignon et l'ail dans une poêle.",
-            "Ajouter la viande hachée et cuire jusqu'à ce qu'elle soit bien dorée. Ajouter la sauce tomate et les épices.",
-            "Dans un plat à gratin, alterner les couches : pâtes, viande, fromage, béchamel. Répéter jusqu'à épuisement des ingrédients.",
-            "Terminer par une couche de fromage. Enfourner pendant 45 minutes.",
-            "Laisser reposer 10 minutes avant de servir.",
-          ],
-        },
-      ]
+      // Vérifier le cache si on reset (première page)
+      if (reset) {
+        const cachedData = getUserRecipesCache()
+        if (cachedData && cachedData.recipes && cachedData.recipes.length > 0) {
+          const transformedRecipes = cachedData.recipes.map((recipe) =>
+            transformRecipeFromAPI(recipe, false)
+          )
+          
+          // Trier par date décroissante
+          const sortedRecipes = transformedRecipes.sort((a, b) => {
+            const dateA = a.date || a.id || 0
+            const dateB = b.date || b.id || 0
+            return dateB - dateA
+          })
+          
+          setRecipes(sortedRecipes)
+          setOffset(10)
+          setIsLoading(false)
+          
+          // Charger en arrière-plan pour mettre à jour le cache
+          loadUserRecipesFromAPI(true)
+          return
+        }
+      }
 
-      setRecipes(mockRecipes)
+      // Charger depuis l'API
+      await loadUserRecipesFromAPI(reset)
     } catch (error) {
       const errorMessage = formatErrorMessage(error)
       setError(errorMessage)
@@ -115,21 +68,74 @@ function MyRecipes() {
     }
   }
 
+  const loadUserRecipesFromAPI = async (reset = false) => {
+    try {
+      const currentOffset = reset ? 0 : offset
+      // Utiliser mode: 'author' pour récupérer les recettes dont le client est l'auteur
+      const data = await recipesService.getUserRecipes({
+        quantity: 10,
+        offset: currentOffset,
+      })
+
+      // Sauvegarder dans le cache si on reset (première page)
+      if (reset && data.recipes) {
+        setUserRecipesCache({ recipes: data.recipes })
+      }
+
+      // Transformer les recettes au format attendu
+      const transformedRecipes = (data.recipes || []).map((recipe) =>
+        transformRecipeFromAPI(recipe, false) // Les recettes de l'auteur ne sont pas forcément en favoris
+      )
+
+      // Trier par date de création décroissante (plus récentes en premier)
+      const sortedRecipes = transformedRecipes.sort((a, b) => {
+        const dateA = a.date || a.id || 0
+        const dateB = b.date || b.id || 0
+        return dateB - dateA
+      })
+
+      if (reset) {
+        setRecipes(sortedRecipes)
+        setOffset(10)
+      } else {
+        // Éviter les doublons
+        const existingIds = new Set(recipes.map((r) => r.id))
+        const newRecipes = sortedRecipes.filter((r) => !existingIds.has(r.id))
+        const allRecipes = [...recipes, ...newRecipes].sort((a, b) => {
+          const dateA = a.date || a.id || 0
+          const dateB = b.date || b.id || 0
+          return dateB - dateA
+        })
+        setRecipes(allRecipes)
+        setOffset((prev) => prev + sortedRecipes.length)
+      }
+
+      // Vérifier s'il y a plus de recettes à charger
+      setHasMore(transformedRecipes.length === 10)
+    } catch (error) {
+      throw error
+    }
+  }
+
   const handleDelete = async (recipeId) => {
     try {
-      // TODO: Appel API pour supprimer la recette
-      // await recipesService.deleteRecipe(recipeId)
+      // Appel API pour supprimer la recette (seul l'auteur peut supprimer)
+      await recipesService.deleteRecipe(recipeId)
 
-      // Supprimer la recette de la liste avec animation
+      // Supprimer la recette de la liste
       setRecipes((prevRecipes) => prevRecipes.filter((recipe) => recipe.id !== recipeId))
 
       setFlashMessage({
-        message: 'Recette désenregistrée avec succès!',
+        message: 'Recette supprimée avec succès!',
         type: 'success',
       })
 
-      // Optionnel: Émettre un événement pour mettre à jour le compteur dans le profil
-      // window.dispatchEvent(new CustomEvent('recipeDeleted'))
+      // Invalider les caches pour forcer le rechargement
+      clearUserRecipesCache()
+      clearCommunityRecipesCache()
+
+      // Émettre un événement pour mettre à jour le compteur dans le profil
+      window.dispatchEvent(new CustomEvent('recipeDeleted'))
     } catch (error) {
       const errorMessage = formatErrorMessage(error)
       setFlashMessage({
@@ -189,7 +195,7 @@ function MyRecipes() {
                   {error}
                 </p>
                 <button
-                  onClick={loadUserRecipes}
+                  onClick={() => loadUserRecipes(true)}
                   className="px-6 py-3 rounded-xl bg-primary text-white font-medium hover:opacity-90 transition-opacity"
                 >
                   Réessayer

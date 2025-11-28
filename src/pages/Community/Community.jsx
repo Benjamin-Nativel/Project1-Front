@@ -2,6 +2,8 @@ import { useState, useEffect } from 'react'
 import { BottomNavigation, CommunityHeader, CommunityRecipeCard, RecipeDetailSheet, FlashMessage } from '../../components'
 import { recipesService } from '../../services/api'
 import { formatErrorMessage } from '../../utils/errors'
+import { transformRecipeFromAPI } from '../../utils'
+import { getCommunityRecipesCache, setCommunityRecipesCache, clearCommunityRecipesCache, clearFavoriteRecipesCache } from '../../utils/storage'
 
 /**
  * Page Communauté - Affiche les recettes partagées par la communauté
@@ -13,113 +15,68 @@ function Community() {
   const [selectedRecipe, setSelectedRecipe] = useState(null)
   const [isSheetOpen, setIsSheetOpen] = useState(false)
   const [flashMessage, setFlashMessage] = useState(null)
+  const [favoritedIds, setFavoritedIds] = useState(new Set()) // État local des favoris
+  const [offset, setOffset] = useState(0)
+  const [hasMore, setHasMore] = useState(true)
 
-  // Charger les recettes de la communauté
+  // Charger les favoris puis les recettes
   useEffect(() => {
-    loadCommunityRecipes()
+    const loadData = async () => {
+      const favoriteIds = await loadFavoritesStatus()
+      await loadCommunityRecipes(true, favoriteIds)
+    }
+    loadData()
   }, [])
 
-  const loadCommunityRecipes = async () => {
+  const loadFavoritesStatus = async () => {
+    try {
+      // Charger les favoris pour savoir quelles recettes sont déjà en favoris
+      const favoritesData = await recipesService.getFavorites({ quantity: 100 })
+      const favoriteIds = new Set(favoritesData.recipes?.map((r) => r.id) || [])
+      setFavoritedIds(favoriteIds)
+      return favoriteIds
+    } catch (error) {
+      // Ignorer les erreurs silencieusement - on peut continuer sans cette info
+      console.warn('Impossible de charger les favoris:', error)
+      return new Set()
+    }
+  }
+
+  const loadCommunityRecipes = async (reset = false, favoriteIdsSet = null) => {
     try {
       setIsLoading(true)
       setError(null)
 
-      // TODO: Remplacer par l'appel API réel quand l'endpoint sera disponible
-      // const data = await recipesService.getCommunityRecipes()
-      
-      // Données mockées pour le moment (basées sur la maquette)
-      const mockRecipes = [
-        {
-          id: 1,
-          name: 'Creamy Chicken & Broccoli Rice',
-          description: 'Une recette simple et délicieuse avec vos ingrédients',
-          author: {
-            name: 'Jean Dupont',
-            timeAgo: 'Il y a 2 heures',
-          },
-          createdAt: 'Il y a 2 heures',
-          preparation_time_minutes: 30,
-          ingredients: [
-            '2 poitrines de poulet désossées et sans peau, coupées en dés',
-            '1 tasse de riz blanc',
-            '1 tête de brocoli, coupée en fleurettes',
-            '1 tasse de crème épaisse',
-            '1/2 tasse de parmesan râpé',
-            '2 gousses d\'ail, hachées',
-            'Sel et poivre au goût',
-          ],
-          steps: [
-            "Cuire le riz selon les instructions sur l'emballage. Pendant qu'il cuit, assaisonner le poulet coupé en dés avec du sel et du poivre.",
-            "Dans une grande poêle, cuire le poulet à feu moyen-élevé jusqu'à ce qu'il soit doré et cuit. Retirer et réserver.",
-            "Dans la même poêle, faire revenir l'ail haché pendant environ 30 secondes. Ajouter les fleurettes de brocoli et cuire jusqu'à ce qu'elles soient tendres mais encore croquantes.",
-            "Réduire le feu à doux, verser la crème épaisse et porter à ébullition. Incorporer le parmesan jusqu'à ce qu'il soit fondu et que la sauce ait légèrement épaissi.",
-            "Remettre le poulet dans la poêle. Ajouter le riz cuit et mélanger le tout jusqu'à ce que tout soit bien combiné et chaud. Assaisonner avec du sel et du poivre supplémentaires si nécessaire. Servir immédiatement.",
-          ],
-          isFavorited: false,
-          favoritesCount: 12,
-        },
-        {
-          id: 2,
-          name: 'Salade de Quinoa aux Légumes',
-          description: 'Une salade fraîche et équilibrée, parfaite pour l\'été',
-          author: {
-            name: 'Marie Martin',
-            timeAgo: 'Il y a 5 heures',
-          },
-          createdAt: 'Il y a 5 heures',
-          preparation_time_minutes: 20,
-          ingredients: [
-            '1 tasse de quinoa',
-            '2 tomates, coupées en dés',
-            '1 concombre, coupé en dés',
-            '1 poivron rouge, coupé en dés',
-            '1/4 tasse d\'huile d\'olive',
-            '2 cuillères à soupe de vinaigre de cidre',
-            'Sel et poivre au goût',
-          ],
-          steps: [
-            "Cuire le quinoa selon les instructions sur l'emballage. Laisser refroidir.",
-            "Couper tous les légumes en dés de taille uniforme.",
-            "Mélanger l'huile d'olive et le vinaigre dans un petit bol pour faire la vinaigrette.",
-            "Dans un grand saladier, mélanger le quinoa refroidi avec tous les légumes.",
-            "Verser la vinaigrette sur la salade et mélanger délicatement. Assaisonner avec du sel et du poivre. Servir frais.",
-          ],
-          isFavorited: true,
-          favoritesCount: 8,
-        },
-        {
-          id: 3,
-          name: 'Lasagnes Maison',
-          description: 'Une recette traditionnelle de lasagnes au fromage et à la viande',
-          author: {
-            name: 'Pierre Bernard',
-            timeAgo: 'Il y a 1 jour',
-          },
-          createdAt: 'Il y a 1 jour',
-          preparation_time_minutes: 60,
-          ingredients: [
-            '12 feuilles de pâtes à lasagnes',
-            '500g de viande hachée',
-            '400g de sauce tomate',
-            '300g de fromage râpé',
-            '200g de béchamel',
-            '1 oignon, haché',
-            '2 gousses d\'ail, hachées',
-            'Sel, poivre, origan',
-          ],
-          steps: [
-            "Préchauffer le four à 180°C. Faire revenir l'oignon et l'ail dans une poêle.",
-            "Ajouter la viande hachée et cuire jusqu'à ce qu'elle soit bien dorée. Ajouter la sauce tomate et les épices.",
-            "Dans un plat à gratin, alterner les couches : pâtes, viande, fromage, béchamel. Répéter jusqu'à épuisement des ingrédients.",
-            "Terminer par une couche de fromage. Enfourner pendant 45 minutes.",
-            "Laisser reposer 10 minutes avant de servir.",
-          ],
-          isFavorited: false,
-          favoritesCount: 25,
-        },
-      ]
+      // Vérifier le cache si on reset (première page)
+      if (reset) {
+        const cachedData = getCommunityRecipesCache()
+        if (cachedData && cachedData.recipes && Array.isArray(cachedData.recipes) && cachedData.recipes.length > 0) {
+          const idsToCheck = favoriteIdsSet || favoritedIds
+          const transformedRecipes = cachedData.recipes.map((recipe) =>
+            transformRecipeFromAPI(recipe, idsToCheck.has(recipe.id))
+          )
+          
+          // Trier par date décroissante
+          const sortedRecipes = transformedRecipes.sort((a, b) => {
+            const dateA = a.date || a.id || 0
+            const dateB = b.date || b.id || 0
+            return dateB - dateA
+          })
+          
+          setRecipes(sortedRecipes)
+          setOffset(10)
+          setIsLoading(false)
+          
+          // Charger en arrière-plan pour mettre à jour le cache (sans bloquer l'UI)
+          loadCommunityRecipesFromAPI(true, favoriteIdsSet).catch((err) => {
+            console.warn('Erreur lors du chargement en arrière-plan:', err)
+          })
+          return
+        }
+      }
 
-      setRecipes(mockRecipes)
+      // Charger depuis l'API
+      await loadCommunityRecipesFromAPI(reset, favoriteIdsSet)
     } catch (error) {
       const errorMessage = formatErrorMessage(error)
       setError(errorMessage)
@@ -129,6 +86,62 @@ function Community() {
       })
     } finally {
       setIsLoading(false)
+    }
+  }
+
+  const loadCommunityRecipesFromAPI = async (reset = false, favoriteIdsSet = null) => {
+    try {
+      const currentOffset = reset ? 0 : offset
+      const data = await recipesService.getCommunityRecipes({
+        quantity: 10,
+        offset: currentOffset,
+      })
+
+      // Sauvegarder dans le cache si on reset (première page)
+      // Sauvegarder les recettes brutes de l'API (avant transformation)
+      if (reset && data && data.recipes && Array.isArray(data.recipes) && data.recipes.length > 0) {
+        try {
+          setCommunityRecipesCache({ recipes: data.recipes })
+        } catch (cacheError) {
+          console.error('Erreur lors de la sauvegarde du cache:', cacheError)
+        }
+      }
+
+      // Utiliser les IDs de favoris passés en paramètre ou l'état actuel
+      const idsToCheck = favoriteIdsSet || favoritedIds
+      const transformedRecipes = (data.recipes || []).map((recipe) =>
+        transformRecipeFromAPI(recipe, idsToCheck.has(recipe.id))
+      )
+
+      // Trier les recettes par date de création décroissante (plus récentes en premier)
+      // Si pas de date, utiliser l'ID comme fallback (les IDs plus élevés sont généralement plus récents)
+      const sortedRecipes = transformedRecipes.sort((a, b) => {
+        const dateA = a.date || a.id || 0
+        const dateB = b.date || b.id || 0
+        return dateB - dateA // Décroissant : plus récentes en premier
+      })
+
+      if (reset) {
+        setRecipes(sortedRecipes)
+        setOffset(10)
+      } else {
+        // Pour la pagination, fusionner et re-trier toutes les recettes
+        // Éviter les doublons en filtrant par ID
+        const existingIds = new Set(recipes.map((r) => r.id))
+        const newRecipes = sortedRecipes.filter((r) => !existingIds.has(r.id))
+        const allRecipes = [...recipes, ...newRecipes].sort((a, b) => {
+          const dateA = a.date || a.id || 0
+          const dateB = b.date || b.id || 0
+          return dateB - dateA
+        })
+        setRecipes(allRecipes)
+        setOffset((prev) => prev + sortedRecipes.length)
+      }
+
+      // Vérifier s'il y a plus de recettes à charger
+      setHasMore(transformedRecipes.length === 10)
+    } catch (error) {
+      throw error
     }
   }
 
@@ -144,14 +157,25 @@ function Community() {
 
   const handleToggleFavorite = async (recipeId, isFavorited) => {
     try {
-      // TODO: Appel API pour ajouter/retirer des favoris
-      // await recipesService.toggleFavorite(recipeId, isFavorited)
+      // Appel API pour ajouter/retirer des favoris
+      await recipesService.toggleFavorite(recipeId, isFavorited)
 
-      // Mettre à jour l'état local
+      // Mettre à jour l'état local des favoris
+      setFavoritedIds((prev) => {
+        const newSet = new Set(prev)
+        if (isFavorited) {
+          newSet.add(recipeId)
+        } else {
+          newSet.delete(recipeId)
+        }
+        return newSet
+      })
+
+      // Mettre à jour l'état local des recettes
       setRecipes((prevRecipes) =>
         prevRecipes.map((recipe) =>
           recipe.id === recipeId
-            ? { ...recipe, isFavorited, favoritesCount: isFavorited ? (recipe.favoritesCount || 0) + 1 : Math.max(0, (recipe.favoritesCount || 1) - 1) }
+            ? { ...recipe, isFavorited }
             : recipe
         )
       )
@@ -161,7 +185,6 @@ function Community() {
         setSelectedRecipe((prev) => ({
           ...prev,
           isFavorited,
-          favoritesCount: isFavorited ? (prev.favoritesCount || 0) + 1 : Math.max(0, (prev.favoritesCount || 1) - 1),
         }))
       }
 
@@ -171,6 +194,10 @@ function Community() {
           : 'Recette retirée des favoris!',
         type: 'success',
       })
+
+      // Ne pas invalider le cache de la communauté car le statut favoris est géré localement
+      // Invalider seulement le cache des favoris pour forcer le rechargement de la page favoris
+      clearFavoriteRecipesCache()
     } catch (error) {
       const errorMessage = formatErrorMessage(error)
       setFlashMessage({

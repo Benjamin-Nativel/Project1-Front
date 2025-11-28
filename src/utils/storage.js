@@ -45,10 +45,13 @@ export const clearAuth = () => {
   removeToken()
   // Supprimer les données utilisateur
   removeUser()
-  // Nettoyer aussi le cache de l'inventaire, des client_items, des catégories et des données admin lors de la déconnexion
+  // Nettoyer aussi le cache de l'inventaire, des client_items, des catégories, des recettes et des données admin lors de la déconnexion
   clearInventoryCache()
   clearClientItemsCache()
   clearCategoriesCache()
+  clearCommunityRecipesCache()
+  clearUserRecipesCache()
+  clearFavoriteRecipesCache()
   clearAdminItemsCache()
   clearAdminCategoriesCache()
   clearAdminUsersCache()
@@ -330,4 +333,141 @@ export const clearAdminUsersCache = () => {
   localStorage.removeItem(ADMIN_USERS_CACHE_TIMESTAMP_KEY)
 }
 
+/**
+ * Cache des recettes de la communauté (mode: 'all')
+ */
+const COMMUNITY_RECIPES_CACHE_KEY = 'community_recipes_cache'
+const COMMUNITY_RECIPES_CACHE_TIMESTAMP_KEY = 'community_recipes_cache_timestamp'
+const COMMUNITY_RECIPES_CACHE_DURATION = 5 * 60 * 1000 // 5 minutes
+
+export const getCommunityRecipesCache = () => {
+  const cacheData = localStorage.getItem(COMMUNITY_RECIPES_CACHE_KEY)
+  const timestamp = localStorage.getItem(COMMUNITY_RECIPES_CACHE_TIMESTAMP_KEY)
+  
+  if (!cacheData || !timestamp) {
+    return null
+  }
+  
+  const now = Date.now()
+  const cacheAge = now - parseInt(timestamp, 10)
+  
+  // Vérifier si le cache est encore valide
+  if (cacheAge > COMMUNITY_RECIPES_CACHE_DURATION) {
+    clearCommunityRecipesCache()
+    return null
+  }
+  
+  try {
+    return JSON.parse(cacheData)
+  } catch (error) {
+    clearCommunityRecipesCache()
+    return null
+  }
+}
+
+export const setCommunityRecipesCache = (data) => {
+  try {
+    localStorage.setItem(COMMUNITY_RECIPES_CACHE_KEY, JSON.stringify(data))
+    localStorage.setItem(COMMUNITY_RECIPES_CACHE_TIMESTAMP_KEY, Date.now().toString())
+  } catch (error) {
+    console.error('Erreur lors de la sauvegarde du cache recettes communauté:', error)
+  }
+}
+
+export const clearCommunityRecipesCache = () => {
+  localStorage.removeItem(COMMUNITY_RECIPES_CACHE_KEY)
+  localStorage.removeItem(COMMUNITY_RECIPES_CACHE_TIMESTAMP_KEY)
+}
+
+/**
+ * Cache des recettes de l'utilisateur (mode: 'author')
+ */
+const USER_RECIPES_CACHE_KEY = 'user_recipes_cache'
+const USER_RECIPES_CACHE_TIMESTAMP_KEY = 'user_recipes_cache_timestamp'
+const USER_RECIPES_CACHE_DURATION = 5 * 60 * 1000 // 5 minutes
+
+export const getUserRecipesCache = () => {
+  const cacheData = localStorage.getItem(USER_RECIPES_CACHE_KEY)
+  const timestamp = localStorage.getItem(USER_RECIPES_CACHE_TIMESTAMP_KEY)
+  
+  if (!cacheData || !timestamp) {
+    return null
+  }
+  
+  const now = Date.now()
+  const cacheAge = now - parseInt(timestamp, 10)
+  
+  // Vérifier si le cache est encore valide
+  if (cacheAge > USER_RECIPES_CACHE_DURATION) {
+    clearUserRecipesCache()
+    return null
+  }
+  
+  try {
+    return JSON.parse(cacheData)
+  } catch (error) {
+    clearUserRecipesCache()
+    return null
+  }
+}
+
+export const setUserRecipesCache = (data) => {
+  try {
+    localStorage.setItem(USER_RECIPES_CACHE_KEY, JSON.stringify(data))
+    localStorage.setItem(USER_RECIPES_CACHE_TIMESTAMP_KEY, Date.now().toString())
+  } catch (error) {
+    console.error('Erreur lors de la sauvegarde du cache recettes utilisateur:', error)
+  }
+}
+
+export const clearUserRecipesCache = () => {
+  localStorage.removeItem(USER_RECIPES_CACHE_KEY)
+  localStorage.removeItem(USER_RECIPES_CACHE_TIMESTAMP_KEY)
+}
+
+/**
+ * Cache des recettes favorites (mode: 'favorite')
+ */
+const FAVORITE_RECIPES_CACHE_KEY = 'favorite_recipes_cache'
+const FAVORITE_RECIPES_CACHE_TIMESTAMP_KEY = 'favorite_recipes_cache_timestamp'
+const FAVORITE_RECIPES_CACHE_DURATION = 5 * 60 * 1000 // 5 minutes
+
+export const getFavoriteRecipesCache = () => {
+  const cacheData = localStorage.getItem(FAVORITE_RECIPES_CACHE_KEY)
+  const timestamp = localStorage.getItem(FAVORITE_RECIPES_CACHE_TIMESTAMP_KEY)
+  
+  if (!cacheData || !timestamp) {
+    return null
+  }
+  
+  const now = Date.now()
+  const cacheAge = now - parseInt(timestamp, 10)
+  
+  // Vérifier si le cache est encore valide
+  if (cacheAge > FAVORITE_RECIPES_CACHE_DURATION) {
+    clearFavoriteRecipesCache()
+    return null
+  }
+  
+  try {
+    return JSON.parse(cacheData)
+  } catch (error) {
+    clearFavoriteRecipesCache()
+    return null
+  }
+}
+
+export const setFavoriteRecipesCache = (data) => {
+  try {
+    localStorage.setItem(FAVORITE_RECIPES_CACHE_KEY, JSON.stringify(data))
+    localStorage.setItem(FAVORITE_RECIPES_CACHE_TIMESTAMP_KEY, Date.now().toString())
+  } catch (error) {
+    console.error('Erreur lors de la sauvegarde du cache recettes favorites:', error)
+  }
+}
+
+export const clearFavoriteRecipesCache = () => {
+  localStorage.removeItem(FAVORITE_RECIPES_CACHE_KEY)
+  localStorage.removeItem(FAVORITE_RECIPES_CACHE_TIMESTAMP_KEY)
+}
 

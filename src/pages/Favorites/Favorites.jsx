@@ -3,6 +3,8 @@ import { useNavigate } from 'react-router-dom'
 import { BottomNavigation, CommunityRecipeCard, RecipeDetailSheet, FlashMessage, PageHeader } from '../../components'
 import { recipesService } from '../../services/api'
 import { formatErrorMessage } from '../../utils/errors'
+import { transformRecipeFromAPI } from '../../utils'
+import { getFavoriteRecipesCache, setFavoriteRecipesCache, clearFavoriteRecipesCache, clearCommunityRecipesCache } from '../../utils/storage'
 import { routes } from '../../config/routes'
 
 /**
@@ -16,54 +18,39 @@ function Favorites() {
   const [selectedRecipe, setSelectedRecipe] = useState(null)
   const [isSheetOpen, setIsSheetOpen] = useState(false)
   const [flashMessage, setFlashMessage] = useState(null)
+  const [offset, setOffset] = useState(0)
+  const [hasMore, setHasMore] = useState(true)
 
   // Charger les recettes favorites
   useEffect(() => {
-    loadFavorites()
+    loadFavorites(true)
   }, [])
 
-  const loadFavorites = async () => {
+  const loadFavorites = async (reset = false) => {
     try {
       setIsLoading(true)
       setError(null)
 
-      // TODO: Remplacer par l'appel API réel quand l'endpoint sera disponible
-      // const data = await recipesService.getFavorites()
-      
-      // Données mockées pour le moment (basées sur la maquette)
-      const mockFavorites = [
-        {
-          id: 2,
-          name: 'Salade de Quinoa aux Légumes',
-          description: 'Une salade fraîche et équilibrée, parfaite pour l\'été',
-          author: {
-            name: 'Marie Martin',
-            timeAgo: 'Il y a 5 heures',
-          },
-          createdAt: 'Il y a 5 heures',
-          preparation_time_minutes: 20,
-          ingredients: [
-            '1 tasse de quinoa',
-            '2 tomates, coupées en dés',
-            '1 concombre, coupé en dés',
-            '1 poivron rouge, coupé en dés',
-            '1/4 tasse d\'huile d\'olive',
-            '2 cuillères à soupe de vinaigre de cidre',
-            'Sel et poivre au goût',
-          ],
-          steps: [
-            "Cuire le quinoa selon les instructions sur l'emballage. Laisser refroidir.",
-            "Couper tous les légumes en dés de taille uniforme.",
-            "Mélanger l'huile d'olive et le vinaigre dans un petit bol pour faire la vinaigrette.",
-            "Dans un grand saladier, mélanger le quinoa refroidi avec tous les légumes.",
-            "Verser la vinaigrette sur la salade et mélanger délicatement. Assaisonner avec du sel et du poivre. Servir frais.",
-          ],
-          isFavorited: true,
-          favoritesCount: 8,
-        },
-      ]
+      // Vérifier le cache si on reset (première page)
+      if (reset) {
+        const cachedData = getFavoriteRecipesCache()
+        if (cachedData && cachedData.recipes && cachedData.recipes.length > 0) {
+          const transformedRecipes = cachedData.recipes.map((recipe) =>
+            transformRecipeFromAPI(recipe, true)
+          )
+          
+          setRecipes(transformedRecipes)
+          setOffset(10)
+          setIsLoading(false)
+          
+          // Charger en arrière-plan pour mettre à jour le cache
+          loadFavoritesFromAPI(true)
+          return
+        }
+      }
 
-      setRecipes(mockFavorites)
+      // Charger depuis l'API
+      await loadFavoritesFromAPI(reset)
     } catch (error) {
       const errorMessage = formatErrorMessage(error)
       setError(errorMessage)
@@ -73,6 +60,39 @@ function Favorites() {
       })
     } finally {
       setIsLoading(false)
+    }
+  }
+
+  const loadFavoritesFromAPI = async (reset = false) => {
+    try {
+      const currentOffset = reset ? 0 : offset
+      const data = await recipesService.getFavorites({
+        quantity: 10,
+        offset: currentOffset,
+      })
+
+      // Sauvegarder dans le cache si on reset (première page)
+      if (reset && data.recipes) {
+        setFavoriteRecipesCache({ recipes: data.recipes })
+      }
+
+      // Toutes les recettes dans les favoris sont forcément en favoris
+      const transformedRecipes = (data.recipes || []).map((recipe) =>
+        transformRecipeFromAPI(recipe, true)
+      )
+
+      if (reset) {
+        setRecipes(transformedRecipes)
+        setOffset(10)
+      } else {
+        setRecipes((prev) => [...prev, ...transformedRecipes])
+        setOffset((prev) => prev + transformedRecipes.length)
+      }
+
+      // Vérifier s'il y a plus de recettes à charger
+      setHasMore(transformedRecipes.length === 10)
+    } catch (error) {
+      throw error
     }
   }
 
@@ -87,8 +107,8 @@ function Favorites() {
 
   const handleToggleFavorite = async (recipeId, isFavorited) => {
     try {
-      // TODO: Appel API pour ajouter/retirer des favoris
-      // await recipesService.toggleFavorite(recipeId, isFavorited)
+      // Appel API pour ajouter/retirer des favoris
+      await recipesService.toggleFavorite(recipeId, isFavorited)
 
       // Si on retire des favoris, supprimer la carte de la liste
       if (!isFavorited) {
@@ -103,12 +123,16 @@ function Favorites() {
           message: 'Recette retirée des favoris!',
           type: 'success',
         })
+
+        // Invalider les caches pour forcer le rechargement
+        clearFavoriteRecipesCache()
+        clearCommunityRecipesCache()
       } else {
-        // Mettre à jour l'état local
+        // Mettre à jour l'état local (normalement ne devrait pas arriver sur la page favoris)
         setRecipes((prevRecipes) =>
           prevRecipes.map((recipe) =>
             recipe.id === recipeId
-              ? { ...recipe, isFavorited, favoritesCount: (recipe.favoritesCount || 0) + 1 }
+              ? { ...recipe, isFavorited }
               : recipe
           )
         )
@@ -118,7 +142,6 @@ function Favorites() {
           setSelectedRecipe((prev) => ({
             ...prev,
             isFavorited,
-            favoritesCount: (prev.favoritesCount || 0) + 1,
           }))
         }
 
@@ -210,7 +233,7 @@ function Favorites() {
                   {error}
                 </p>
                 <button
-                  onClick={loadFavorites}
+                  onClick={() => loadFavorites(true)}
                   className="px-6 py-3 rounded-xl bg-primary text-white font-medium hover:opacity-90 transition-opacity"
                 >
                   Réessayer
