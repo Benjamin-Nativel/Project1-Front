@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { useLocation } from 'react-router-dom'
 import ProfileCard from '../ProfileCard'
 import { inventoryService, recipesService } from '../../services/api'
 import { getClientItemsCache, setClientItemsCache } from '../../utils/storage'
@@ -8,43 +9,63 @@ import { getClientItemsCache, setClientItemsCache } from '../../utils/storage'
  * Affiche les cartes "Mon Inventaire" et "Mes Recettes" avec les statistiques
  */
 function UserProfileContent() {
+  const location = useLocation()
   const [inventoryCount, setInventoryCount] = useState(0)
   const [recipesCount, setRecipesCount] = useState(0)
   const [isLoading, setIsLoading] = useState(true)
 
   useEffect(() => {
     loadStats()
-  }, [])
+
+    // Écouter les événements de création/suppression de recette pour mettre à jour le compteur
+    const handleRecipeChange = () => {
+      loadStats()
+    }
+
+    window.addEventListener('recipeCreated', handleRecipeChange)
+    window.addEventListener('recipeDeleted', handleRecipeChange)
+
+    return () => {
+      window.removeEventListener('recipeCreated', handleRecipeChange)
+      window.removeEventListener('recipeDeleted', handleRecipeChange)
+    }
+  }, [location.pathname]) // Recharger quand on revient sur la page profil
 
   const loadStats = async () => {
     try {
       setIsLoading(true)
       
-      // Vérifier le cache localStorage d'abord
-      const cachedData = getClientItemsCache()
-      if (cachedData) {
-        setInventoryCount(cachedData.length)
-        setIsLoading(false)
-        // Charger en arrière-plan pour mettre à jour le cache
-        loadClientItemsInBackground()
-        return
-      }
-      
-      // Charger les items créés par l'utilisateur (client_items uniquement)
-      // getClientItems() retourne tous les items dans client_items (même ceux avec quantité 0)
-      const clientItems = await inventoryService.getClientItems()
-      // Mettre à jour le cache
-      setClientItemsCache(clientItems)
-      // Compter tous les ingrédients créés par l'utilisateur
-      setInventoryCount(clientItems.length)
+      // Charger les items et les recettes en parallèle
+      const [clientItemsResult, recipesResult] = await Promise.allSettled([
+        // Charger les items créés par l'utilisateur (client_items uniquement)
+        (async () => {
+          // Vérifier le cache localStorage d'abord
+          const cachedData = getClientItemsCache()
+          if (cachedData) {
+            setInventoryCount(cachedData.length)
+            // Charger en arrière-plan pour mettre à jour le cache
+            loadClientItemsInBackground()
+            return cachedData
+          }
+          
+          const clientItems = await inventoryService.getClientItems()
+          // Mettre à jour le cache
+          setClientItemsCache(clientItems)
+          // Compter tous les ingrédients créés par l'utilisateur
+          setInventoryCount(clientItems.length)
+          return clientItems
+        })(),
+        // Charger le nombre de recettes créées par l'utilisateur (mode: 'author')
+        recipesService.getUserRecipes({ quantity: 100 })
+      ])
 
-      // Charger le nombre de recettes (si l'API le supporte)
-      try {
-        const recipes = await recipesService.getRecipes()
-        setRecipesCount(Array.isArray(recipes) ? recipes.length : 0)
-      } catch (error) {
+      // Traiter le résultat des recettes
+      if (recipesResult.status === 'fulfilled') {
+        const recipesData = recipesResult.value
+        setRecipesCount(Array.isArray(recipesData.recipes) ? recipesData.recipes.length : 0)
+      } else {
         // Si l'API n'est pas disponible, on met 0
-        console.warn('Impossible de charger les recettes:', error)
+        console.warn('Impossible de charger les recettes:', recipesResult.reason)
         setRecipesCount(0)
       }
     } catch (error) {
