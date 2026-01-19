@@ -7,7 +7,8 @@
     "dev": "vite",
     "build": "vite build",
     "build:to": "node deploy.js",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "ngrok": "ngrok http 5173"
   },
   "dependencies": {
     "axios": "^1.13.2",

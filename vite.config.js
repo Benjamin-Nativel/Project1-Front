@@ -52,4 +52,19 @@ export default defineConfig({
             }
         })
     ],
+    server: {
+        host: '0.0.0.0', // Permet les connexions depuis n'importe quelle interface réseau (nécessaire pour ngrok)
+        port: 5173,
+        strictPort: true,
+        allowedHosts: true, // Autorise tous les hôtes (nécessaire pour ngrok)
+        proxy: {
+            // Proxy pour toutes les routes backend (API, auth, uploads, etc.)
+            // Redirige toutes les requêtes vers le backend Symfony sur le port 8000
+            '^/(api|user|auth|uploads)': {
+                target: 'http://localhost:8000',
+                changeOrigin: true,
+                secure: false
+            }
+        }
+    }
 })

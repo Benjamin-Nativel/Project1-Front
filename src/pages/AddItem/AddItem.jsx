@@ -1,7 +1,8 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { AddItemForm, BottomNavigation, FlashMessage } from '../../components'
+import { AddItemForm, BottomNavigation, FlashMessage, DetectedIngredients } from '../../components'
 import { itemsService } from '../../services/api/items'
+import { inventoryService } from '../../services/api/inventory'
 import { formatErrorMessage } from '../../utils/errors'
 import { getInventoryCache, setInventoryCache } from '../../utils/storage'
 import { getItemImageUrl } from '../../utils/constants'
@@ -13,7 +14,9 @@ import { getItemImageUrl } from '../../utils/constants'
 function AddItem() {
   const navigate = useNavigate()
   const [isLoading, setIsLoading] = useState(false)
+  const [isAnalyzing, setIsAnalyzing] = useState(false)
   const [flashMessage, setFlashMessage] = useState(null)
+  const [detectedIngredients, setDetectedIngredients] = useState(null)
 
   const handleSubmit = async (itemData) => {
     try {
@@ -93,6 +96,104 @@ function AddItem() {
     }
   }
 
+  const handleAnalyzeDocument = async (file) => {
+    try {
+      setIsAnalyzing(true)
+      setFlashMessage(null)
+      setDetectedIngredients(null)
+      
+      console.log('🔍 Début de l\'analyse du document:', file.name, file.size, 'bytes')
+      
+      // Appeler l'API pour analyser le document
+      const response = await inventoryService.analyzeDocument(file)
+      
+      console.log('✅ Analyse terminée:', response)
+      
+      if (response.ingredients && Array.isArray(response.ingredients)) {
+        if (response.ingredients.length === 0) {
+          setFlashMessage({
+            message: 'Aucun ingrédient détecté dans le document',
+            type: 'info'
+          })
+        } else {
+          setDetectedIngredients(response.ingredients)
+        }
+      } else {
+        setFlashMessage({
+          message: 'Aucun ingrédient détecté dans le document',
+          type: 'info'
+        })
+      }
+    } catch (error) {
+      console.error('❌ Erreur complète:', error)
+      
+      let errorMessage = formatErrorMessage(error)
+      
+      // Message plus spécifique pour les erreurs réseau
+      if (error.request && !error.response) {
+        errorMessage = 'Impossible de contacter le serveur. Vérifiez que le backend est démarré sur le port 8000.'
+      } else if (error.code === 'ECONNREFUSED' || error.code === 'ERR_NETWORK') {
+        errorMessage = 'Connexion refusée. Le serveur backend n\'est peut-être pas démarré.'
+      }
+      
+      setFlashMessage({
+        message: errorMessage || 'Une erreur est survenue lors de l\'analyse du document',
+        type: 'error'
+      })
+    } finally {
+      setIsAnalyzing(false)
+    }
+  }
+
+  const handleAddDetectedIngredient = async (ingredient) => {
+    try {
+      setIsLoading(true)
+      setFlashMessage(null)
+      
+      if (ingredient.type === 'EXISTING_ITEM' && ingredient.existing_item_id) {
+        // Si c'est un item existant, l'ajouter directement à l'inventaire
+        await inventoryService.addItem({
+          itemId: ingredient.existing_item_id,
+          quantity: ingredient.quantity || 1
+        })
+      } else if (ingredient.type === 'NEW_ITEM') {
+        // Si c'est un nouvel item, le créer d'abord puis l'ajouter à l'inventaire
+        const createResponse = await itemsService.createItem({
+          name: ingredient.name,
+          category: ingredient.category_id
+        })
+        
+        if (createResponse.item) {
+          // Ajouter à l'inventaire
+          await inventoryService.addItem({
+            itemId: createResponse.item.id,
+            quantity: ingredient.quantity || 1
+          })
+        }
+      }
+      
+      // Afficher un message de succès
+      setFlashMessage({
+        message: `"${ingredient.name}" ajouté avec succès !`,
+        type: 'success'
+      })
+      
+      // Recharger l'inventaire
+      const updatedData = await inventoryService.getItems()
+      setInventoryCache(updatedData)
+      
+    } catch (error) {
+      const errorMessage = formatErrorMessage(error)
+      setFlashMessage({
+        message: errorMessage || `Une erreur est survenue lors de l'ajout de "${ingredient.name}"`,
+        type: 'error'
+      })
+      throw error // Re-lancer l'erreur pour que le composant puisse gérer
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
   return (
     <div className="w-full min-h-screen bg-background-light dark:bg-background-dark flex md:flex-row">
       {flashMessage && (
@@ -104,7 +205,25 @@ function AddItem() {
       )}
       <BottomNavigation />
       <div className="flex-1 md:ml-20 lg:ml-24">
-        <AddItemForm onSubmit={handleSubmit} isLoading={isLoading} />
+        {detectedIngredients ? (
+          <DetectedIngredients
+            ingredients={detectedIngredients}
+            onAdd={handleAddDetectedIngredient}
+            onCancel={() => {
+              setDetectedIngredients(null)
+              setFlashMessage(null)
+            }}
+            isLoading={isLoading}
+          />
+        ) : (
+          <AddItemForm 
+            onSubmit={handleSubmit} 
+            onAnalyzeDocument={handleAnalyzeDocument}
+            isLoading={isLoading}
+            isAnalyzing={isAnalyzing}
+            detectedIngredients={detectedIngredients}
+          />
+        )}
       </div>
     </div>
   )

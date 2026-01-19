@@ -19,6 +19,7 @@ function IngredientFormSheet({
 }) {
   const { categories } = useCategories()
   const fileInputRef = useRef(null)
+  const cameraInputRef = useRef(null)
   const [formData, setFormData] = useState({
     name: '',
     category: '',
@@ -70,9 +71,12 @@ function IngredientFormSheet({
       setImagePreview(null)
     }
     setErrors({})
-    // Réinitialiser le file input
+    // Réinitialiser les file inputs
     if (fileInputRef.current) {
       fileInputRef.current.value = ''
+    }
+    if (cameraInputRef.current) {
+      cameraInputRef.current.value = ''
     }
   }, [editingItem, isOpen, categories])
 
@@ -136,6 +140,10 @@ function IngredientFormSheet({
     fileInputRef.current?.click()
   }
 
+  const handleCameraClick = () => {
+    cameraInputRef.current?.click()
+  }
+
   const handleRemoveImage = () => {
     if (imagePreview) {
       URL.revokeObjectURL(imagePreview)
@@ -147,6 +155,9 @@ function IngredientFormSheet({
     }))
     if (fileInputRef.current) {
       fileInputRef.current.value = ''
+    }
+    if (cameraInputRef.current) {
+      cameraInputRef.current.value = ''
     }
   }
 
@@ -224,6 +235,14 @@ function IngredientFormSheet({
               onChange={handleImageChange}
               className="hidden"
             />
+            <input
+              type="file"
+              ref={cameraInputRef}
+              accept="image/jpeg,image/jpg,image/png"
+              capture="environment"
+              onChange={handleImageChange}
+              className="hidden"
+            />
             {imagePreview ? (
               <div className="relative">
                 <img
@@ -240,13 +259,33 @@ function IngredientFormSheet({
                 </button>
               </div>
             ) : (
-              <button
-                type="button"
-                onClick={handleImageClick}
-                className="flex items-center justify-center size-28 rounded-2xl bg-slate-200 dark:bg-slate-700 text-text-secondary-light dark:text-text-secondary-dark hover:opacity-80 transition-opacity"
-              >
-                <span className="material-symbols-outlined text-5xl">add_photo_alternate</span>
-              </button>
+              <div className="flex flex-col items-center gap-3">
+                <button
+                  type="button"
+                  onClick={handleImageClick}
+                  className="flex items-center justify-center size-28 rounded-2xl bg-slate-200 dark:bg-slate-700 text-text-secondary-light dark:text-text-secondary-dark hover:opacity-80 transition-opacity"
+                >
+                  <span className="material-symbols-outlined text-5xl">add_photo_alternate</span>
+                </button>
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    onClick={handleImageClick}
+                    className="flex items-center gap-2 px-4 py-2 rounded-lg bg-slate-100 dark:bg-slate-800 text-text-light dark:text-text-dark hover:opacity-80 transition-opacity text-sm"
+                  >
+                    <span className="material-symbols-outlined text-lg">photo_library</span>
+                    Galerie
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleCameraClick}
+                    className="flex items-center gap-2 px-4 py-2 rounded-lg bg-primary/10 text-primary hover:opacity-80 transition-opacity text-sm"
+                  >
+                    <span className="material-symbols-outlined text-lg">camera_alt</span>
+                    Caméra
+                  </button>
+                </div>
+              </div>
             )}
             <p className="mt-2 text-sm text-text-secondary-light dark:text-text-secondary-dark">
               {imagePreview ? 'Cliquez pour changer la photo' : 'Ajouter une photo (optionnel)'}
