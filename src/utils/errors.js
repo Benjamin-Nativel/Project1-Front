@@ -81,7 +81,18 @@ export const formatErrorMessage = (error) => {
       case 422:
         return data.message || 'Erreur de validation'
       case 500:
-        return 'Erreur serveur. Veuillez réessayer plus tard.'
+        // Afficher le message d'erreur du serveur si disponible
+        if (data?.message) {
+          return `Erreur serveur: ${data.message}`
+        }
+        if (data?.error) {
+          return `Erreur serveur: ${data.error}`
+        }
+        // En développement, afficher plus de détails
+        if (import.meta.env.DEV && data) {
+          console.error('Détails de l\'erreur 500:', data)
+        }
+        return 'Erreur serveur. Veuillez réessayer plus tard ou contacter le support.'
       default:
         // Gérer les différents formats de réponse
         if (data.message) {

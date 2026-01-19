@@ -12,6 +12,7 @@ export const authService = {
    */
   login: async (credentials) => {
     try {
+      console.log('Tentative de connexion:', { email: credentials.email, url: '/user/login' })
       const response = await axiosInstance.post('/user/login', credentials)
       const { token, user } = response.data
       
@@ -27,6 +28,19 @@ export const authService = {
       
       return { token, user }
     } catch (error) {
+      // Log détaillé pour le débogage
+      if (error.response) {
+        console.error('Erreur de connexion (détails):', {
+          status: error.response.status,
+          statusText: error.response.statusText,
+          data: error.response.data,
+          headers: error.response.headers
+        })
+      } else if (error.request) {
+        console.error('Erreur réseau - aucune réponse du serveur:', error.request)
+      } else {
+        console.error('Erreur de configuration:', error.message)
+      }
       // Laisser formatErrorMessage gérer le formatage des erreurs
       throw error
     }

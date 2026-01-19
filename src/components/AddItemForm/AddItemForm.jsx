@@ -7,18 +7,25 @@ import { useCategories } from '../../hooks'
  * Composant AddItemForm - Formulaire d'ajout d'item (Mobile First)
  * @param {Object} props
  * @param {Function} props.onSubmit - Fonction appelée lors de la soumission du formulaire
+ * @param {Function} props.onAnalyzeDocument - Fonction appelée pour analyser un document
  * @param {boolean} props.isLoading - État de chargement
+ * @param {boolean} props.isAnalyzing - État de chargement de l'analyse
+ * @param {Array} props.detectedIngredients - Liste des ingrédients détectés
  */
-function AddItemForm({ onSubmit, isLoading = false }) {
+function AddItemForm({ onSubmit, onAnalyzeDocument, isLoading = false, isAnalyzing = false, detectedIngredients = null }) {
   const navigate = useNavigate()
   const { categories, isLoading: isLoadingCategories } = useCategories()
   const fileInputRef = useRef(null)
+  const cameraInputRef = useRef(null)
+  const documentInputRef = useRef(null)
+  const [mode, setMode] = useState('manual') // 'manual' ou 'photo'
   const [formData, setFormData] = useState({
     name: '',
     category: '',
     image: null
   })
   const [imagePreview, setImagePreview] = useState(null)
+  const [documentPreview, setDocumentPreview] = useState(null)
   const [errors, setErrors] = useState({})
   const [focusedField, setFocusedField] = useState(null)
 
@@ -38,8 +45,11 @@ function AddItemForm({ onSubmit, isLoading = false }) {
       if (imagePreview) {
         URL.revokeObjectURL(imagePreview)
       }
+      if (documentPreview) {
+        URL.revokeObjectURL(documentPreview)
+      }
     }
-  }, [imagePreview])
+  }, [imagePreview, documentPreview])
 
   const handleChange = (e) => {
     const { name, value } = e.target
@@ -101,6 +111,10 @@ function AddItemForm({ onSubmit, isLoading = false }) {
     fileInputRef.current?.click()
   }
 
+  const handleCameraClick = () => {
+    cameraInputRef.current?.click()
+  }
+
   const handleRemoveImage = () => {
     if (imagePreview) {
       URL.revokeObjectURL(imagePreview)
@@ -112,6 +126,66 @@ function AddItemForm({ onSubmit, isLoading = false }) {
     }))
     if (fileInputRef.current) {
       fileInputRef.current.value = ''
+    }
+  }
+
+  const handleDocumentChange = (e) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+
+    // Vérifier la taille (10 Mo max pour les documents)
+    const maxSize = 10 * 1024 * 1024 // 10 Mo en octets
+    if (file.size > maxSize) {
+      setErrors(prev => ({
+        ...prev,
+        document: 'Le document ne doit pas dépasser 10 Mo'
+      }))
+      return
+    }
+
+    // Vérifier le type de fichier
+    const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp', 'application/pdf']
+    if (!allowedTypes.includes(file.type)) {
+      setErrors(prev => ({
+        ...prev,
+        document: 'Format de fichier invalide. Formats acceptés: JPG, PNG, WEBP, PDF'
+      }))
+      return
+    }
+
+    // Créer une prévisualisation si c'est une image
+    if (file.type.startsWith('image/')) {
+      const preview = URL.createObjectURL(file)
+      setDocumentPreview(preview)
+    } else {
+      setDocumentPreview(null)
+    }
+
+    // Effacer l'erreur
+    if (errors.document) {
+      setErrors(prev => ({
+        ...prev,
+        document: ''
+      }))
+    }
+
+    // Analyser le document
+    if (onAnalyzeDocument) {
+      onAnalyzeDocument(file)
+    }
+  }
+
+  const handleDocumentClick = () => {
+    documentInputRef.current?.click()
+  }
+
+  const handleRemoveDocument = () => {
+    if (documentPreview) {
+      URL.revokeObjectURL(documentPreview)
+    }
+    setDocumentPreview(null)
+    if (documentInputRef.current) {
+      documentInputRef.current.value = ''
     }
   }
 
@@ -170,12 +244,122 @@ function AddItemForm({ onSubmit, isLoading = false }) {
 
       {/* Main Content - Centré */}
       <main className="flex-1 mx-auto w-full max-w-md md:max-w-lg lg:max-w-4xl xl:max-w-5xl 2xl:max-w-6xl px-4 md:px-6 lg:px-8 py-2 md:py-4 lg:py-6 space-y-6 md:space-y-8 pb-28 md:pb-32">
-        {/* Photo Section */}
-        <div className="flex flex-col items-center justify-center pt-4">
+        {/* Mode Selector */}
+        <div className="flex gap-2 pt-4">
+          <button
+            type="button"
+            onClick={() => {
+              setMode('manual')
+              setDocumentPreview(null)
+              setFormData({ name: '', category: '', image: null })
+              setErrors({})
+            }}
+            className={`flex-1 py-3 px-4 rounded-xl text-center font-medium transition-all ${
+              mode === 'manual'
+                ? 'bg-primary text-white'
+                : 'bg-slate-200 dark:bg-slate-700 text-text-light dark:text-text-dark'
+            }`}
+          >
+            <span className="material-symbols-outlined align-middle mr-2">edit</span>
+            Formulaire manuel
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              setMode('photo')
+              setImagePreview(null)
+              setFormData({ name: '', category: '', image: null })
+              setErrors({})
+            }}
+            className={`flex-1 py-3 px-4 rounded-xl text-center font-medium transition-all ${
+              mode === 'photo'
+                ? 'bg-primary text-white'
+                : 'bg-slate-200 dark:bg-slate-700 text-text-light dark:text-text-dark'
+            }`}
+          >
+            <span className="material-symbols-outlined align-middle mr-2">camera_alt</span>
+            Analyser une photo
+          </button>
+        </div>
+
+        {mode === 'photo' ? (
+          /* Document Analysis Section */
+          <div className="flex flex-col items-center justify-center pt-4 space-y-4">
+            <input
+              type="file"
+              ref={documentInputRef}
+              accept="image/jpeg,image/jpg,image/png,image/webp,application/pdf"
+              onChange={handleDocumentChange}
+              className="hidden"
+            />
+            {documentPreview ? (
+              <div className="relative">
+                <img
+                  src={documentPreview}
+                  alt="Preview"
+                  className="max-w-full max-h-64 rounded-2xl object-contain"
+                />
+                <button
+                  type="button"
+                  onClick={handleRemoveDocument}
+                  className="absolute -top-2 -right-2 flex items-center justify-center size-8 rounded-full bg-destructive text-white hover:opacity-80 transition-opacity"
+                >
+                  <span className="material-symbols-outlined text-lg">close</span>
+                </button>
+              </div>
+            ) : (
+              <div className="flex flex-col items-center gap-3">
+                <button
+                  type="button"
+                  onClick={handleDocumentClick}
+                  disabled={isAnalyzing}
+                  className="flex items-center justify-center size-28 rounded-2xl bg-slate-200 dark:bg-slate-700 text-text-secondary-light dark:text-text-secondary-dark hover:opacity-80 transition-opacity disabled:opacity-50"
+                >
+                  <span className="material-symbols-outlined text-5xl">document_scanner</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={handleDocumentClick}
+                  disabled={isAnalyzing}
+                  className="flex items-center gap-2 px-4 py-2 rounded-lg bg-primary/10 text-primary hover:opacity-80 transition-opacity text-sm disabled:opacity-50"
+                >
+                  <span className="material-symbols-outlined text-lg">upload_file</span>
+                  {isAnalyzing ? 'Analyse en cours...' : 'Choisir un document'}
+                </button>
+              </div>
+            )}
+            <p className="text-sm text-text-secondary-light dark:text-text-secondary-dark text-center">
+              {documentPreview 
+                ? 'Document sélectionné. L\'analyse est en cours...' 
+                : 'Téléchargez une photo ou un PDF (ticket de caisse, liste de courses, etc.)'}
+            </p>
+            {errors.document && (
+              <span className="text-sm text-destructive mt-1">{errors.document}</span>
+            )}
+            {isAnalyzing && (
+              <div className="flex items-center gap-2 text-primary">
+                <span className="material-symbols-outlined animate-spin">sync</span>
+                <span>Analyse du document en cours...</span>
+              </div>
+            )}
+          </div>
+        ) : (
+          /* Manual Form Section */
+          <>
+            {/* Photo Section */}
+            <div className="flex flex-col items-center justify-center pt-4">
           <input
             type="file"
             ref={fileInputRef}
             accept="image/jpeg,image/jpg,image/png,image/gif,image/webp"
+            onChange={handleImageChange}
+            className="hidden"
+          />
+          <input
+            type="file"
+            ref={cameraInputRef}
+            accept="image/jpeg,image/jpg,image/png"
+            capture="environment"
             onChange={handleImageChange}
             className="hidden"
           />
@@ -195,13 +379,33 @@ function AddItemForm({ onSubmit, isLoading = false }) {
               </button>
             </div>
           ) : (
-            <button
-              type="button"
-              onClick={handleImageClick}
-              className="flex items-center justify-center size-28 rounded-2xl bg-slate-200 dark:bg-slate-700 text-text-secondary-light dark:text-text-secondary-dark hover:opacity-80 transition-opacity"
-            >
-              <span className="material-symbols-outlined text-5xl">add_photo_alternate</span>
-            </button>
+            <div className="flex flex-col items-center gap-3">
+              <button
+                type="button"
+                onClick={handleImageClick}
+                className="flex items-center justify-center size-28 rounded-2xl bg-slate-200 dark:bg-slate-700 text-text-secondary-light dark:text-text-secondary-dark hover:opacity-80 transition-opacity"
+              >
+                <span className="material-symbols-outlined text-5xl">add_photo_alternate</span>
+              </button>
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  onClick={handleImageClick}
+                  className="flex items-center gap-2 px-4 py-2 rounded-lg bg-slate-100 dark:bg-slate-800 text-text-light dark:text-text-dark hover:opacity-80 transition-opacity text-sm"
+                >
+                  <span className="material-symbols-outlined text-lg">photo_library</span>
+                  Galerie
+                </button>
+                <button
+                  type="button"
+                  onClick={handleCameraClick}
+                  className="flex items-center gap-2 px-4 py-2 rounded-lg bg-primary/10 text-primary hover:opacity-80 transition-opacity text-sm"
+                >
+                  <span className="material-symbols-outlined text-lg">camera_alt</span>
+                  Caméra
+                </button>
+              </div>
+            </div>
           )}
           <p className="mt-2 text-sm text-text-secondary-light dark:text-text-secondary-dark">
             {imagePreview ? 'Cliquez pour changer la photo' : 'Ajouter une photo (optionnel)'}
@@ -304,6 +508,8 @@ function AddItemForm({ onSubmit, isLoading = false }) {
             </button>
           </div>
         </form>
+        </>
+        )}
       </main>
     </div>
   )

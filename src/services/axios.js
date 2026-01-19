@@ -7,7 +7,7 @@ import { getToken, removeToken } from '../utils/storage'
  */
 const axiosInstance = axios.create({
   baseURL: API_BASE_URL,
-  timeout: 10000, // 10 secondes
+  timeout: 120000, // 2 minutes (120 secondes) - nécessaire pour l'analyse de documents avec IA
   headers: {
     'Content-Type': 'application/json',
   },
@@ -70,7 +70,13 @@ axiosInstance.interceptors.response.use(
       
       // Erreur 500 : Erreur serveur
       if (status >= 500) {
-        console.error('Erreur serveur:', data.message || 'Une erreur est survenue sur le serveur')
+        console.error('Erreur serveur:', {
+          status,
+          message: data?.message || data?.error || 'Une erreur est survenue sur le serveur',
+          data: data,
+          url: error.config?.url,
+          method: error.config?.method
+        })
       }
     } else if (error.request) {
       // La requête a été faite mais aucune réponse n'a été reçue

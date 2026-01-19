@@ -181,6 +181,38 @@ export const inventoryService = {
       throw error
     }
   },
+
+  /**
+   * Analyser un document (image ou PDF) pour extraire des ingrédients
+   * @param {File} document - Fichier image ou PDF à analyser
+   * @returns {Promise<Object>} - { ingredients: Array } Liste des ingrédients détectés
+   */
+  analyzeDocument: async (document) => {
+    try {
+      const formData = new FormData()
+      formData.append('document', document)
+      
+      console.log('📤 Envoi du document pour analyse:', {
+        fileName: document.name,
+        fileSize: document.size,
+        fileType: document.type,
+        url: '/api/inventories/add-by-doc'
+      })
+      
+      const response = await axiosInstance.post('/api/inventories/add-by-doc', formData)
+      console.log('✅ Réponse reçue:', response.data)
+      return response.data
+    } catch (error) {
+      console.error('❌ Erreur lors de l\'analyse du document:', {
+        message: error.message,
+        response: error.response?.data,
+        status: error.response?.status,
+        url: error.config?.url,
+        baseURL: error.config?.baseURL
+      })
+      throw error
+    }
+  },
 }
 
 export default inventoryService
