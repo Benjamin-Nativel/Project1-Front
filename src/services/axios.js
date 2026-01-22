@@ -7,7 +7,7 @@ import { getToken, removeToken } from '../utils/storage'
  */
 const axiosInstance = axios.create({
   baseURL: API_BASE_URL,
-  timeout: 120000, // 2 minutes (120 secondes) - nécessaire pour l'analyse de documents avec IA
+  timeout: 300000, // 5 minutes (300 secondes) - nécessaire pour l'analyse de documents avec IA et audio
   headers: {
     'Content-Type': 'application/json',
   },

@@ -3,3 +3,4 @@
  */
 export { useCounter } from './useCounter'
 export { useCategories } from './useCategories'
+export { useVoiceRecorder } from './useVoiceRecorder'

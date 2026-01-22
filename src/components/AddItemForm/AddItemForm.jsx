@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import PageHeader from '../PageHeader'
-import { useCategories } from '../../hooks'
+import { useCategories, useVoiceRecorder } from '../../hooks'
 
 /**
  * Composant AddItemForm - Formulaire d'ajout d'item (Mobile First)
@@ -15,10 +15,12 @@ import { useCategories } from '../../hooks'
 function AddItemForm({ onSubmit, onAnalyzeDocument, isLoading = false, isAnalyzing = false, detectedIngredients = null }) {
   const navigate = useNavigate()
   const { categories, isLoading: isLoadingCategories } = useCategories()
+  const { isRecording, startRecording, stopRecording, audioBlob, error: voiceError, setError: setVoiceError } = useVoiceRecorder()
   const fileInputRef = useRef(null)
   const cameraInputRef = useRef(null)
   const documentInputRef = useRef(null)
-  const [mode, setMode] = useState('manual') // 'manual' ou 'photo'
+  const processedAudioBlobRef = useRef(null)
+  const [mode, setMode] = useState('manual') // 'manual', 'photo' ou 'vocal'
   const [formData, setFormData] = useState({
     name: '',
     category: '',
@@ -50,6 +52,54 @@ function AddItemForm({ onSubmit, onAnalyzeDocument, isLoading = false, isAnalyzi
       }
     }
   }, [imagePreview, documentPreview])
+
+  // Gérer l'analyse de l'audio quand il est prêt
+  useEffect(() => {
+    // Vérifier que nous avons un nouveau audioBlob qui n'a pas encore été traité
+    if (audioBlob && onAnalyzeDocument && audioBlob !== processedAudioBlobRef.current) {
+      // Marquer ce blob comme traité pour éviter les re-traitements
+      processedAudioBlobRef.current = audioBlob
+      
+      // Déterminer l'extension de fichier selon le type MIME
+      // Tous les formats sont maintenant supportés grâce à la conversion en WAV
+      const getFileInfo = (mimeType) => {
+        let normalizedType = mimeType || 'audio/wav'
+        let extension = 'wav'
+        
+        if (mimeType && mimeType.includes('audio/ogg')) {
+          normalizedType = 'audio/ogg'
+          extension = 'ogg'
+        } else if (mimeType && (mimeType.includes('audio/wav') || mimeType === 'audio/x-wav')) {
+          normalizedType = 'audio/wav'
+          extension = 'wav'
+        } else {
+          // Tous les autres formats sont convertis en WAV
+          normalizedType = 'audio/wav'
+          extension = 'wav'
+        }
+        
+        return { type: normalizedType, extension }
+      }
+      
+      const { type: normalizedType, extension } = getFileInfo(audioBlob.type)
+      const fileName = `vocal-${Date.now()}.${extension}`
+      
+      console.log('🎤 Fichier audio créé:', {
+        fileName,
+        type: normalizedType,
+        size: audioBlob.size
+      })
+      
+      // Créer le fichier avec le type MIME normalisé
+      const audioFile = new File([audioBlob], fileName, { 
+        type: normalizedType,
+        lastModified: Date.now()
+      })
+      
+      // Envoyer le fichier audio à l'API (tous les formats sont maintenant supportés)
+      onAnalyzeDocument(audioFile)
+    }
+  }, [audioBlob, onAnalyzeDocument, setVoiceError])
 
   const handleChange = (e) => {
     const { name, value } = e.target
@@ -245,7 +295,7 @@ function AddItemForm({ onSubmit, onAnalyzeDocument, isLoading = false, isAnalyzi
       {/* Main Content - Centré */}
       <main className="flex-1 mx-auto w-full max-w-md md:max-w-lg lg:max-w-4xl xl:max-w-5xl 2xl:max-w-6xl px-4 md:px-6 lg:px-8 py-2 md:py-4 lg:py-6 space-y-6 md:space-y-8 pb-28 md:pb-32">
         {/* Mode Selector */}
-        <div className="flex gap-2 pt-4">
+        <div className="flex gap-2 pt-4 overflow-x-auto pb-2 no-scrollbar">
           <button
             type="button"
             onClick={() => {
@@ -253,15 +303,17 @@ function AddItemForm({ onSubmit, onAnalyzeDocument, isLoading = false, isAnalyzi
               setDocumentPreview(null)
               setFormData({ name: '', category: '', image: null })
               setErrors({})
+              setVoiceError(null)
+              processedAudioBlobRef.current = null
             }}
-            className={`flex-1 py-3 px-4 rounded-xl text-center font-medium transition-all ${
+            className={`flex-1 min-w-[140px] py-3 px-4 rounded-xl text-center font-medium transition-all duration-200 flex items-center justify-center ${
               mode === 'manual'
-                ? 'bg-primary text-white'
-                : 'bg-slate-200 dark:bg-slate-700 text-text-light dark:text-text-dark'
+                ? 'bg-primary text-white shadow-md shadow-primary/20'
+                : 'bg-slate-200 dark:bg-slate-700 text-text-light dark:text-text-dark hover:bg-slate-300 dark:hover:bg-slate-600'
             }`}
           >
-            <span className="material-symbols-outlined align-middle mr-2">edit</span>
-            Formulaire manuel
+            <span className={`material-symbols-outlined mr-2 ${mode === 'manual' ? 'text-white' : 'text-text-light dark:text-text-dark'}`}>edit</span>
+            <span>Manuel</span>
           </button>
           <button
             type="button"
@@ -270,15 +322,36 @@ function AddItemForm({ onSubmit, onAnalyzeDocument, isLoading = false, isAnalyzi
               setImagePreview(null)
               setFormData({ name: '', category: '', image: null })
               setErrors({})
+              setVoiceError(null)
+              processedAudioBlobRef.current = null
             }}
-            className={`flex-1 py-3 px-4 rounded-xl text-center font-medium transition-all ${
+            className={`flex-1 min-w-[140px] py-3 px-4 rounded-xl text-center font-medium transition-all duration-200 flex items-center justify-center ${
               mode === 'photo'
-                ? 'bg-primary text-white'
-                : 'bg-slate-200 dark:bg-slate-700 text-text-light dark:text-text-dark'
+                ? 'bg-primary text-white shadow-md shadow-primary/20'
+                : 'bg-slate-200 dark:bg-slate-700 text-text-light dark:text-text-dark hover:bg-slate-300 dark:hover:bg-slate-600'
             }`}
           >
-            <span className="material-symbols-outlined align-middle mr-2">camera_alt</span>
-            Analyser une photo
+            <span className={`material-symbols-outlined mr-2 ${mode === 'photo' ? 'text-white' : 'text-text-light dark:text-text-dark'}`}>camera_alt</span>
+            <span>Photo</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              setMode('vocal')
+              setImagePreview(null)
+              setDocumentPreview(null)
+              setFormData({ name: '', category: '', image: null })
+              setErrors({})
+              processedAudioBlobRef.current = null
+            }}
+            className={`flex-1 min-w-[140px] py-3 px-4 rounded-xl text-center font-medium transition-all duration-200 flex items-center justify-center ${
+              mode === 'vocal'
+                ? 'bg-primary text-white shadow-md shadow-primary/20'
+                : 'bg-slate-200 dark:bg-slate-700 text-text-light dark:text-text-dark hover:bg-slate-300 dark:hover:bg-slate-600'
+            }`}
+          >
+            <span className={`material-symbols-outlined mr-2 ${mode === 'vocal' ? 'text-white' : 'text-text-light dark:text-text-dark'}`}>mic</span>
+            <span>Vocal</span>
           </button>
         </div>
 
@@ -340,6 +413,53 @@ function AddItemForm({ onSubmit, onAnalyzeDocument, isLoading = false, isAnalyzi
               <div className="flex items-center gap-2 text-primary">
                 <span className="material-symbols-outlined animate-spin">sync</span>
                 <span>Analyse du document en cours...</span>
+              </div>
+            )}
+          </div>
+        ) : mode === 'vocal' ? (
+          /* Voice Analysis Section */
+          <div className="flex flex-col items-center justify-center pt-8 space-y-6">
+            <div className="relative">
+              {isRecording && (
+                <div className="absolute inset-0 rounded-full bg-primary/20 animate-ping"></div>
+              )}
+              <button
+                type="button"
+                onClick={isRecording ? stopRecording : startRecording}
+                disabled={isAnalyzing}
+                className={`relative flex items-center justify-center size-32 rounded-full transition-all ${
+                  isRecording 
+                    ? 'bg-destructive text-white shadow-lg shadow-destructive/30 scale-110' 
+                    : 'bg-primary text-white shadow-lg shadow-primary/30 hover:scale-105'
+                } disabled:opacity-50 disabled:scale-100`}
+              >
+                <span className="material-symbols-outlined text-5xl">
+                  {isRecording ? 'stop' : 'mic'}
+                </span>
+              </button>
+            </div>
+
+            <div className="text-center space-y-2">
+              <h3 className="text-xl font-bold text-text-light dark:text-text-dark">
+                {isRecording ? 'Je vous écoute...' : 'Commande vocale'}
+              </h3>
+              <p className="text-sm text-text-secondary-light dark:text-text-secondary-dark max-w-xs mx-auto">
+                {isRecording 
+                  ? 'Appuyez sur le bouton pour arrêter l\'enregistrement' 
+                  : 'Dites par exemple : "Ajoute deux briques de lait et un kilo de pommes"'}
+              </p>
+            </div>
+
+            {voiceError && (
+              <div className="bg-destructive/10 text-destructive px-4 py-2 rounded-lg text-sm">
+                {voiceError}
+              </div>
+            )}
+
+            {isAnalyzing && (
+              <div className="flex flex-col items-center gap-3 text-primary">
+                <span className="material-symbols-outlined animate-spin text-4xl">sync</span>
+                <span className="font-medium">Analyse de votre voix en cours...</span>
               </div>
             )}
           </div>
