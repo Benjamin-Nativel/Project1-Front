@@ -15,7 +15,7 @@ import { useCategories, useVoiceRecorder } from '../../hooks'
 function AddItemForm({ onSubmit, onAnalyzeDocument, isLoading = false, isAnalyzing = false, detectedIngredients = null }) {
   const navigate = useNavigate()
   const { categories, isLoading: isLoadingCategories } = useCategories()
-  const { isRecording, startRecording, stopRecording, audioBlob, error: voiceError, setError: setVoiceError } = useVoiceRecorder()
+  const { isRecording, startRecording, stopRecording, audioBlob, error: voiceError, setError: setVoiceError, requestMicrophoneAccess, hasMicrophoneAccess } = useVoiceRecorder()
   const fileInputRef = useRef(null)
   const cameraInputRef = useRef(null)
   const documentInputRef = useRef(null)
@@ -52,6 +52,9 @@ function AddItemForm({ onSubmit, onAnalyzeDocument, isLoading = false, isAnalyzi
       }
     }
   }, [imagePreview, documentPreview])
+
+  // Note: On ne demande pas automatiquement l'accès car sur mobile, cela doit être déclenché par une action utilisateur (clic)
+  // L'utilisateur devra cliquer sur le bouton "Autoriser l'accès au microphone" ou directement sur le bouton d'enregistrement
 
   // Gérer l'analyse de l'audio quand il est prêt
   useEffect(() => {
@@ -425,9 +428,21 @@ function AddItemForm({ onSubmit, onAnalyzeDocument, isLoading = false, isAnalyzi
               )}
               <button
                 type="button"
-                onClick={isRecording ? stopRecording : startRecording}
+                onClick={(e) => {
+                  // Important: Gérer le clic directement pour que la demande de permission soit dans le contexte du clic
+                  e.preventDefault()
+                  e.stopPropagation()
+                  
+                  if (isRecording) {
+                    stopRecording()
+                  } else {
+                    // Sur mobile, la demande de permission doit être dans le contexte du clic
+                    console.log('🖱️ Clic sur le bouton d\'enregistrement')
+                    startRecording()
+                  }
+                }}
                 disabled={isAnalyzing}
-                className={`relative flex items-center justify-center size-32 rounded-full transition-all ${
+                className={`relative flex items-center justify-center size-32 rounded-full transition-all active:scale-95 ${
                   isRecording 
                     ? 'bg-destructive text-white shadow-lg shadow-destructive/30 scale-110' 
                     : 'bg-primary text-white shadow-lg shadow-primary/30 hover:scale-105'
@@ -450,9 +465,69 @@ function AddItemForm({ onSubmit, onAnalyzeDocument, isLoading = false, isAnalyzi
               </p>
             </div>
 
+            {!hasMicrophoneAccess && !isRecording && !voiceError && (
+              <div className="flex flex-col items-center gap-4 max-w-md">
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    // Important: Appeler directement sans async/await pour que la demande soit dans le contexte du clic
+                    // Sur mobile, la popup de permission doit être déclenchée directement par le clic
+                    e.preventDefault()
+                    e.stopPropagation()
+                    console.log('🖱️ Clic sur le bouton d\'autorisation')
+                    requestMicrophoneAccess().then((granted) => {
+                      if (granted) {
+                        console.log('✅ Permission accordée, prêt pour l\'enregistrement')
+                      } else {
+                        console.log('❌ Permission refusée')
+                      }
+                    }).catch((err) => {
+                      console.error('❌ Erreur lors de la demande:', err)
+                    })
+                  }}
+                  className="flex items-center gap-2 px-6 py-3 rounded-lg bg-primary text-white font-medium hover:opacity-90 transition-opacity active:scale-95"
+                >
+                  <span className="material-symbols-outlined">mic</span>
+                  Autoriser l'accès au microphone
+                </button>
+                <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 px-4 py-3 rounded-lg text-sm">
+                  <p className="font-medium text-blue-900 dark:text-blue-200 mb-2">📱 Sur mobile Chrome :</p>
+                  <p className="text-xs text-blue-800 dark:text-blue-300 mb-2">
+                    Si la popup n'apparaît pas, autorisez manuellement :
+                  </p>
+                  <ol className="text-xs text-blue-800 dark:text-blue-300 list-decimal list-inside space-y-1">
+                    <li>Menu Chrome (⋮) en haut à droite</li>
+                    <li>Paramètres</li>
+                    <li>Paramètres du site</li>
+                    <li>Microphone</li>
+                    <li>Autoriser pour ce site</li>
+                  </ol>
+                </div>
+              </div>
+            )}
+
             {voiceError && (
-              <div className="bg-destructive/10 text-destructive px-4 py-2 rounded-lg text-sm">
-                {voiceError}
+              <div className="bg-destructive/10 text-destructive px-4 py-2 rounded-lg text-sm max-w-md text-center">
+                <p className="font-medium mb-1">⚠️ Erreur d'accès au microphone</p>
+                <p className="text-xs">{voiceError}</p>
+                <button
+                  type="button"
+                  onClick={requestMicrophoneAccess}
+                  className="mt-3 px-4 py-2 rounded-lg bg-destructive text-white text-xs font-medium hover:opacity-90 transition-opacity"
+                >
+                  Réessayer
+                </button>
+                <p className="text-xs mt-2 opacity-80">
+                  💡 Astuce : Sur mobile, vérifiez les paramètres du navigateur (Chrome > Paramètres > Paramètres du site > Microphone)
+                </p>
+              </div>
+            )}
+            
+            {hasMicrophoneAccess && !voiceError && !isRecording && (
+              <div className="bg-primary/5 border border-primary/20 px-4 py-2 rounded-lg text-sm max-w-md text-center">
+                <p className="text-text-secondary-light dark:text-text-secondary-dark text-xs">
+                  ✅ Microphone autorisé - Cliquez sur le bouton pour commencer l'enregistrement
+                </p>
               </div>
             )}
 
