@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { AddItemForm, BottomNavigation, FlashMessage, DetectedIngredients } from '../../components'
 import { itemsService } from '../../services/api/items'
@@ -96,15 +96,15 @@ function AddItem() {
     }
   }
 
-  const handleAnalyzeDocument = async (file) => {
+  const handleAnalyzeDocument = useCallback(async (file) => {
     try {
       setIsAnalyzing(true)
       setFlashMessage(null)
       setDetectedIngredients(null)
       
-      console.log('🔍 Début de l\'analyse du document:', file.name, file.size, 'bytes')
+      console.log('🔍 Début de l\'analyse du document:', file.name, file.size, 'bytes', 'type:', file.type)
       
-      // Appeler l'API pour analyser le document
+      // Appeler l'API pour analyser le document (l'API gérera la validation du type de fichier)
       const response = await inventoryService.analyzeDocument(file)
       
       console.log('✅ Analyse terminée:', response)
@@ -112,7 +112,7 @@ function AddItem() {
       if (response.ingredients && Array.isArray(response.ingredients)) {
         if (response.ingredients.length === 0) {
           setFlashMessage({
-            message: 'Aucun ingrédient détecté dans le document',
+            message: 'Aucun ingrédient détecté',
             type: 'info'
           })
         } else {
@@ -120,7 +120,7 @@ function AddItem() {
         }
       } else {
         setFlashMessage({
-          message: 'Aucun ingrédient détecté dans le document',
+          message: 'Aucun ingrédient détecté',
           type: 'info'
         })
       }
@@ -134,16 +134,43 @@ function AddItem() {
         errorMessage = 'Impossible de contacter le serveur. Vérifiez que le backend est démarré sur le port 8000.'
       } else if (error.code === 'ECONNREFUSED' || error.code === 'ERR_NETWORK') {
         errorMessage = 'Connexion refusée. Le serveur backend n\'est peut-être pas démarré.'
+      } else if (error.isTimeout || error.code === 'ECONNABORTED') {
+        // Erreur de timeout
+        errorMessage = error.apiMessage || 'Le traitement prend trop de temps. Le serveur a dépassé la limite de temps. Veuillez réessayer avec un enregistrement plus court.'
+      } else if (error.response?.status === 500) {
+        // Erreur serveur - vérifier si c'est un timeout
+        if (error.isTimeout) {
+          errorMessage = error.apiMessage || 'Le traitement de l\'audio prend trop de temps. Le serveur a dépassé la limite de 30 secondes. Veuillez réessayer avec un enregistrement plus court.'
+        } else {
+          const apiMessage = error.apiMessage || error.response?.data?.message || error.response?.data?.error
+          errorMessage = apiMessage || 'Une erreur est survenue sur le serveur lors de l\'analyse. Veuillez réessayer.'
+        }
+      } else if (error.response?.status === 400) {
+        // Afficher le message d'erreur de l'API si disponible
+        const apiMessage = error.response?.data?.message || error.response?.data?.error || error.apiMessage
+        if (apiMessage) {
+          errorMessage = apiMessage
+        } else if (file.type.startsWith('audio/')) {
+          // Message plus spécifique selon le format audio
+          const audioType = file.type
+          if (audioType === 'audio/webm') {
+            errorMessage = 'Le format audio WebM n\'est pas supporté. Veuillez utiliser un autre navigateur ou format.'
+          } else {
+            errorMessage = `Le format audio ${audioType} n'est pas accepté par le serveur. Formats supportés : OGG, WAV, MP3, M4A, AAC, FLAC.`
+          }
+        } else {
+          errorMessage = error.response?.data?.message || 'Erreur lors de l\'analyse du document. Vérifiez le format du fichier.'
+        }
       }
       
       setFlashMessage({
-        message: errorMessage || 'Une erreur est survenue lors de l\'analyse du document',
+        message: errorMessage || 'Une erreur est survenue lors de l\'analyse',
         type: 'error'
       })
     } finally {
       setIsAnalyzing(false)
     }
-  }
+  }, [])
 
   const handleAddDetectedIngredient = async (ingredient) => {
     try {
