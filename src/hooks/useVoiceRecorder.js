@@ -1,6 +1,27 @@
 import { useState, useRef, useCallback } from 'react'
 
 /**
+ * Vérifie si l'hostname est une adresse IP locale (192.168.x.x, 10.x.x.x, 172.16-31.x.x)
+ * @param {string} hostname - Hostname à vérifier
+ * @returns {boolean} - true si c'est une IP locale
+ */
+const isLocalIP = (hostname) => {
+  // IPv4 local patterns
+  const localIPPatterns = [
+    /^192\.168\./,           // 192.168.0.0/16
+    /^10\./,                 // 10.0.0.0/8
+    /^172\.(1[6-9]|2[0-9]|3[0-1])\./, // 172.16.0.0/12
+    /^127\./,                // 127.0.0.0/8 (localhost)
+    /^169\.254\./,           // 169.254.0.0/16 (link-local)
+    /^localhost$/i,          // localhost
+    /^::1$/,                 // IPv6 localhost
+    /^fe80:/i                // IPv6 link-local
+  ]
+  
+  return localIPPatterns.some(pattern => pattern.test(hostname))
+}
+
+/**
  * Convertit un blob audio en format WAV (supporté par le backend)
  * @param {Blob} audioBlob - Blob audio à convertir
  * @returns {Promise<Blob>} - Blob WAV
@@ -17,13 +38,6 @@ const convertToWav = async (audioBlob) => {
     // Convertir en WAV
     const wav = audioBufferToWav(audioBuffer)
     const wavBlob = new Blob([wav], { type: 'audio/wav' })
-    
-    console.log('🔄 Conversion audio:', {
-      original: audioBlob.type,
-      converted: 'audio/wav',
-      originalSize: audioBlob.size,
-      convertedSize: wavBlob.size
-    })
     
     return wavBlob
   } catch (error) {
@@ -86,14 +100,143 @@ const audioBufferToWav = (audioBuffer) => {
 
 /**
  * Hook personnalisé pour l'enregistrement vocal
- * @returns {Object} { isRecording, startRecording, stopRecording, audioBlob, error }
+ * @returns {Object} { isRecording, startRecording, stopRecording, audioBlob, error, requestMicrophoneAccess, hasMicrophoneAccess }
  */
 export const useVoiceRecorder = () => {
   const [isRecording, setIsRecording] = useState(false)
   const [error, setError] = useState(null)
   const [audioBlob, setAudioBlob] = useState(null)
+  const [hasMicrophoneAccess, setHasMicrophoneAccess] = useState(false)
   const mediaRecorderRef = useRef(null)
   const chunksRef = useRef([])
+  const streamRef = useRef(null)
+
+  /**
+   * Gère les erreurs de microphone de manière centralisée
+   */
+  const handleMicrophoneError = useCallback((err) => {
+    let errorMessage = 'Impossible d\'accéder au microphone.'
+    
+    if (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError') {
+      errorMessage = 'Accès au microphone refusé. Veuillez autoriser l\'accès au microphone dans les paramètres de votre navigateur et réessayer.'
+    } else if (err.name === 'NotFoundError' || err.name === 'DevicesNotFoundError') {
+      errorMessage = 'Aucun microphone détecté. Veuillez connecter un microphone et réessayer.'
+    } else if (err.name === 'NotReadableError' || err.name === 'TrackStartError') {
+      errorMessage = 'Le microphone est utilisé par une autre application. Veuillez fermer les autres applications utilisant le microphone et réessayer.'
+    } else if (err.name === 'OverconstrainedError' || err.name === 'ConstraintNotSatisfiedError') {
+      errorMessage = 'Les paramètres audio demandés ne sont pas supportés par votre appareil.'
+    } else if (err.name === 'SecurityError') {
+      const isSecure = window.isSecureContext || location.protocol === 'https:' || location.hostname === 'localhost' || location.hostname === '127.0.0.1'
+      if (!isSecure) {
+        errorMessage = 'Erreur de sécurité : Chrome et les navigateurs modernes exigent HTTPS pour accéder au microphone. Veuillez utiliser HTTPS ou tester en localhost (http://localhost).'
+      } else {
+        errorMessage = 'Erreur de sécurité. Votre navigateur bloque l\'accès au microphone. Vérifiez les paramètres de sécurité de votre navigateur.'
+      }
+    } else if (err.name === 'TypeError') {
+      errorMessage = 'Erreur de configuration. Votre navigateur ne supporte peut-être pas cette fonctionnalité.'
+    } else {
+      errorMessage = `Erreur: ${err.message || 'Impossible d\'accéder au microphone. Veuillez vérifier les permissions dans les paramètres de votre navigateur.'}`
+    }
+    
+    // Message supplémentaire pour mobile
+    const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)
+    if (isMobile && (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError')) {
+      errorMessage += ' Sur mobile, allez dans les paramètres de Chrome > Paramètres du site > Microphone et autorisez l\'accès.'
+    }
+    
+    setError(errorMessage)
+  }, [])
+
+  /**
+   * Demande explicitement l'accès au microphone
+   * @returns {Promise<boolean>} - true si l'accès est accordé, false sinon
+   */
+  const requestMicrophoneAccess = useCallback(async () => {
+    try {
+      setError(null)
+
+      // Vérifier que l'API est disponible
+      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+        const errorMsg = 'Votre navigateur ne supporte pas l\'enregistrement audio. Veuillez utiliser un navigateur moderne (Chrome, Firefox, Safari, Edge).'
+        setError(errorMsg)
+        return false
+      }
+
+      // Vérifier si on est en HTTPS (requis sur mobile sauf localhost)
+      // Chrome et les navigateurs modernes bloquent l'accès au microphone en HTTP
+      // Seul localhost/127.0.0.1 est autorisé en HTTP, pas les IPs locales (192.168.x.x, etc.)
+      const isLocalhost = location.hostname === 'localhost' || location.hostname === '127.0.0.1'
+      const isLocalIPAddress = isLocalIP(location.hostname)
+      const isSecureContext = window.isSecureContext || location.protocol === 'https:' || isLocalhost
+      
+      if (!isSecureContext) {
+        let errorMsg = '🔒 Chrome bloque l\'accès au microphone en HTTP.'
+        
+        if (isLocalIPAddress && !isLocalhost) {
+          // Cas spécifique : accès via IP locale (ex: 192.168.x.x depuis mobile)
+          errorMsg += ' Même via l\'IP de votre PC, Chrome exige HTTPS pour le microphone.\n\n'
+          errorMsg += '💡 Solutions :\n'
+          errorMsg += '1) Utilisez un tunnel HTTPS (recommandé pour mobile) :\n'
+          errorMsg += '   • ngrok : `ngrok http 3000` puis utilisez l\'URL HTTPS fournie\n'
+          errorMsg += '   • Cloudflare Tunnel : `cloudflared tunnel --url http://localhost:3000`\n'
+          errorMsg += '   • localtunnel : `npx localtunnel --port 3000`\n\n'
+          errorMsg += '2) Configurez HTTPS local avec certificat auto-signé\n'
+          errorMsg += '3) Testez uniquement sur PC avec http://localhost'
+        } else {
+          errorMsg += ' L\'accès au microphone nécessite HTTPS (ou localhost pour le développement).'
+        }
+        
+        setError(errorMsg)
+        return false
+      }
+
+      // Détecter si on est sur mobile (une seule fois)
+      const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)
+
+      // Vérifier l'état de la permission si l'API est disponible
+      if (navigator.permissions && navigator.permissions.query) {
+        try {
+          const result = await navigator.permissions.query({ name: 'microphone' })
+          
+          if (result.state === 'denied') {
+            const errorMsg = isMobile 
+              ? 'L\'accès au microphone est refusé. Sur mobile, allez dans Chrome > Menu (⋮) > Paramètres > Paramètres du site > Microphone et autorisez l\'accès pour ce site.'
+              : 'L\'accès au microphone est refusé. Veuillez autoriser l\'accès dans les paramètres de votre navigateur.'
+            setError(errorMsg)
+            setHasMicrophoneAccess(false)
+            return false
+          }
+        } catch (permError) {
+          // L'API permissions.query peut ne pas être supportée, on continue
+        }
+      }
+      
+      // Demander l'accès au microphone
+      const stream = await navigator.mediaDevices.getUserMedia({ 
+        audio: {
+          echoCancellation: true,
+          noiseSuppression: true,
+          autoGainControl: true
+        }
+      })
+      
+      // Marquer que l'accès a été accordé
+      setHasMicrophoneAccess(true)
+      setError(null) // Effacer toute erreur
+      
+      // Arrêter le stream immédiatement (on voulait juste demander la permission)
+      // Le stream sera recréé lors de startRecording
+      stream.getTracks().forEach(track => {
+        track.stop()
+      })
+      
+      return true
+    } catch (err) {
+      setHasMicrophoneAccess(false)
+      handleMicrophoneError(err)
+      return false
+    }
+  }, [handleMicrophoneError])
 
   const startRecording = useCallback(async () => {
     try {
@@ -101,7 +244,65 @@ export const useVoiceRecorder = () => {
       setAudioBlob(null)
       chunksRef.current = []
 
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
+      // Vérifier que l'API est disponible
+      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+        const errorMsg = 'Votre navigateur ne supporte pas l\'enregistrement audio. Veuillez utiliser un navigateur moderne (Chrome, Firefox, Safari, Edge).'
+        setError(errorMsg)
+        return
+      }
+
+      // Vérifier si on est en HTTPS (requis sur mobile sauf localhost)
+      // Chrome et les navigateurs modernes bloquent l'accès au microphone en HTTP
+      // Seul localhost/127.0.0.1 est autorisé en HTTP, pas les IPs locales (192.168.x.x, etc.)
+      const isLocalhost = location.hostname === 'localhost' || location.hostname === '127.0.0.1'
+      const isLocalIPAddress = isLocalIP(location.hostname)
+      const isSecureContext = window.isSecureContext || location.protocol === 'https:' || isLocalhost
+      
+      if (!isSecureContext) {
+        let errorMsg = '🔒 Chrome bloque l\'accès au microphone en HTTP.'
+        
+        if (isLocalIPAddress && !isLocalhost) {
+          // Cas spécifique : accès via IP locale (ex: 192.168.x.x depuis mobile)
+          errorMsg += ' Même via l\'IP de votre PC, Chrome exige HTTPS pour le microphone.\n\n'
+          errorMsg += '💡 Solutions :\n'
+          errorMsg += '1) Utilisez un tunnel HTTPS (recommandé pour mobile) :\n'
+          errorMsg += '   • ngrok : `ngrok http 3000` puis utilisez l\'URL HTTPS fournie\n'
+          errorMsg += '   • Cloudflare Tunnel : `cloudflared tunnel --url http://localhost:3000`\n'
+          errorMsg += '   • localtunnel : `npx localtunnel --port 3000`\n\n'
+          errorMsg += '2) Configurez HTTPS local avec certificat auto-signé\n'
+          errorMsg += '3) Testez uniquement sur PC avec http://localhost'
+        } else {
+          errorMsg += ' L\'accès au microphone nécessite HTTPS (ou localhost pour le développement).'
+        }
+        
+        setError(errorMsg)
+        return
+      }
+
+      // Vérifier les permissions si l'API est disponible
+      let permissionStatus = 'prompt'
+      if (navigator.permissions && navigator.permissions.query) {
+        try {
+          const result = await navigator.permissions.query({ name: 'microphone' })
+          permissionStatus = result.state
+        } catch (permError) {
+          // L'API permissions.query peut ne pas être supportée sur tous les navigateurs
+        }
+      }
+
+      // Demander l'accès au microphone
+      const stream = await navigator.mediaDevices.getUserMedia({ 
+        audio: {
+          echoCancellation: true,
+          noiseSuppression: true,
+          autoGainControl: true
+        }
+      })
+      
+      // Stocker le stream et marquer que l'accès est accordé
+      streamRef.current = stream
+      setHasMicrophoneAccess(true)
+      setError(null) // Effacer toute erreur précédente
       
       // On accepte TOUS les formats supportés par MediaRecorder
       // Ils seront automatiquement convertis en WAV (supporté par le backend) si nécessaire
@@ -125,14 +326,12 @@ export const useVoiceRecorder = () => {
       for (const mimeType of mimeTypesToTest) {
         if (MediaRecorder.isTypeSupported(mimeType)) {
           supportedType = mimeType
-          console.log(`✅ Format supporté trouvé: ${mimeType}`)
           break
         }
       }
       
       // Si aucun format n'est supporté (très rare), utiliser le format par défaut
       if (!supportedType) {
-        console.warn('⚠️ Aucun format MIME spécifique supporté, utilisation du format par défaut du navigateur')
         supportedType = undefined // Laisser MediaRecorder choisir
       }
       
@@ -170,12 +369,10 @@ export const useVoiceRecorder = () => {
         // Si le format n'est pas supporté nativement, convertir en WAV
         if (!isNativeSupported) {
           try {
-            console.log('🔄 Conversion de l\'audio en WAV pour compatibilité backend...')
             finalBlob = await convertToWav(originalBlob)
             finalType = 'audio/wav'
-            console.log('✅ Conversion réussie en WAV')
           } catch (conversionError) {
-            console.error('❌ Erreur lors de la conversion en WAV:', conversionError)
+            console.error('Erreur lors de la conversion en WAV:', conversionError)
             setError('Erreur lors de la conversion audio. Veuillez réessayer.')
             stream.getTracks().forEach(track => track.stop())
             return
@@ -191,27 +388,23 @@ export const useVoiceRecorder = () => {
         
         setAudioBlob(finalBlob)
         
-        console.log('🎤 Enregistrement terminé:', {
-          originalType: storedMimeType || 'audio/webm',
-          finalType: finalType,
-          originalSize: originalBlob.size,
-          finalSize: finalBlob.size,
-          converted: !isNativeSupported ? '✅ Converti en WAV' : '✅ Format natif supporté',
-          chunks: chunksRef.current.length
-        })
-        
         // Arrêter tous les tracks du stream pour libérer le micro
-        stream.getTracks().forEach(track => track.stop())
+        if (streamRef.current) {
+          streamRef.current.getTracks().forEach(track => track.stop())
+          streamRef.current = null
+        } else {
+          stream.getTracks().forEach(track => track.stop())
+        }
       }
 
       mediaRecorder.start()
       setIsRecording(true)
     } catch (err) {
-      console.error('Erreur lors du démarrage de l\'enregistrement:', err)
-      setError('Impossible d\'accéder au microphone. Veuillez vérifier les permissions.')
       setIsRecording(false)
+      setHasMicrophoneAccess(false)
+      handleMicrophoneError(err)
     }
-  }, [])
+  }, [handleMicrophoneError])
 
   const stopRecording = useCallback(() => {
     if (mediaRecorderRef.current && isRecording) {
@@ -220,6 +413,12 @@ export const useVoiceRecorder = () => {
         recorder.stop()
       }
       setIsRecording(false)
+      
+      // Libérer le stream si il existe
+      if (streamRef.current) {
+        streamRef.current.getTracks().forEach(track => track.stop())
+        streamRef.current = null
+      }
     }
   }, [isRecording])
 
@@ -229,6 +428,8 @@ export const useVoiceRecorder = () => {
     stopRecording,
     audioBlob,
     error,
-    setError
+    setError,
+    requestMicrophoneAccess,
+    hasMicrophoneAccess
   }
 }

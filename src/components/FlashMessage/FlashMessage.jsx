@@ -48,7 +48,7 @@ function FlashMessage({
 
   return (
     <div
-      className={`fixed top-4 left-1/2 transform -translate-x-1/2 z-[10000] max-w-md w-full mx-4 px-4 py-3 rounded-xl shadow-lg border-2 ${typeStyles[type]} transition-all duration-300 ${
+      className={`fixed top-4 left-4 right-4 sm:left-1/2 sm:right-auto sm:transform sm:-translate-x-1/2 z-[10000] max-w-md sm:w-full px-4 py-3 rounded-xl shadow-lg border-2 ${typeStyles[type]} transition-all duration-300 ${
         isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 -translate-y-2'
       }`}
     >
