@@ -296,9 +296,8 @@ function AddItemForm({ onSubmit, onAnalyzeDocument, isLoading = false, isAnalyzi
       <PageHeader title="Créer un ingrédient" backPath="/inventaire" />
 
       {/* Main Content - Centré */}
-      <main className="flex-1 mx-auto w-full max-w-md md:max-w-lg lg:max-w-4xl xl:max-w-5xl 2xl:max-w-6xl px-4 md:px-6 lg:px-8 py-2 md:py-4 lg:py-6 space-y-6 md:space-y-8 pb-28 md:pb-32">
-        {/* Mode Selector */}
-        <div className="flex gap-2 pt-4 overflow-x-auto pb-2 no-scrollbar">
+      <main className="flex-1 w-full mx-auto max-w-md md:max-w-lg lg:max-w-4xl xl:max-w-5xl 2xl:max-w-6xl py-2 md:py-4 lg:py-6 space-y-6 md:space-y-8 pb-28 md:pb-32 px-4 md:px-6">
+        <div className="flex flex-wrap gap-2 pt-4 pb-2">
           <button
             type="button"
             onClick={() => {
@@ -309,7 +308,7 @@ function AddItemForm({ onSubmit, onAnalyzeDocument, isLoading = false, isAnalyzi
               setVoiceError(null)
               processedAudioBlobRef.current = null
             }}
-            className={`flex-1 min-w-[140px] py-3 px-4 rounded-xl text-center font-medium transition-all duration-200 flex items-center justify-center ${
+            className={`flex-1 min-w-[calc((100%-1rem)/3)] py-3 px-4 rounded-xl text-center font-medium transition-all duration-200 flex items-center justify-center ${
               mode === 'manual'
                 ? 'bg-primary text-white shadow-md shadow-primary/20'
                 : 'bg-slate-200 dark:bg-slate-700 text-text-light dark:text-text-dark hover:bg-slate-300 dark:hover:bg-slate-600'
@@ -328,7 +327,7 @@ function AddItemForm({ onSubmit, onAnalyzeDocument, isLoading = false, isAnalyzi
               setVoiceError(null)
               processedAudioBlobRef.current = null
             }}
-            className={`flex-1 min-w-[140px] py-3 px-4 rounded-xl text-center font-medium transition-all duration-200 flex items-center justify-center ${
+            className={`flex-1 min-w-[calc((100%-1rem)/3)] py-3 px-4 rounded-xl text-center font-medium transition-all duration-200 flex items-center justify-center ${
               mode === 'photo'
                 ? 'bg-primary text-white shadow-md shadow-primary/20'
                 : 'bg-slate-200 dark:bg-slate-700 text-text-light dark:text-text-dark hover:bg-slate-300 dark:hover:bg-slate-600'
@@ -347,7 +346,7 @@ function AddItemForm({ onSubmit, onAnalyzeDocument, isLoading = false, isAnalyzi
               setErrors({})
               processedAudioBlobRef.current = null
             }}
-            className={`flex-1 min-w-[140px] py-3 px-4 rounded-xl text-center font-medium transition-all duration-200 flex items-center justify-center ${
+            className={`flex-1 min-w-[calc((100%-1rem)/3)] py-3 px-4 rounded-xl text-center font-medium transition-all duration-200 flex items-center justify-center ${
               mode === 'vocal'
                 ? 'bg-primary text-white shadow-md shadow-primary/20'
                 : 'bg-slate-200 dark:bg-slate-700 text-text-light dark:text-text-dark hover:bg-slate-300 dark:hover:bg-slate-600'
@@ -518,7 +517,7 @@ function AddItemForm({ onSubmit, onAnalyzeDocument, isLoading = false, isAnalyzi
                   Réessayer
                 </button>
                 <p className="text-xs mt-2 opacity-80">
-                  💡 Astuce : Sur mobile, vérifiez les paramètres du navigateur (Chrome > Paramètres > Paramètres du site > Microphone)
+                  💡 Astuce : Sur mobile, vérifiez les paramètres du navigateur (Chrome &gt; Paramètres &gt; Paramètres du site &gt; Microphone)
                 </p>
               </div>
             )}
@@ -693,14 +692,16 @@ function AddItemForm({ onSubmit, onAnalyzeDocument, isLoading = false, isAnalyzi
           </div>
 
           {/* Submit Button */}
-          <div className="fixed md:absolute bottom-24 md:bottom-6 left-0 right-0 px-4 md:px-0 max-w-md md:max-w-lg lg:max-w-2xl xl:max-w-3xl mx-auto">
-            <button
-              type="submit"
-              disabled={isLoading || isLoadingCategories || categories.length === 0}
-              className="w-full py-4 px-4 rounded-xl text-center font-bold bg-primary text-white text-lg disabled:opacity-60 disabled:cursor-not-allowed hover:opacity-90 transition-opacity"
-            >
-              {isLoading ? 'Création...' : 'Créer l\'ingrédient'}
-            </button>
+          <div className="fixed md:relative bottom-24 md:bottom-auto left-0 right-0 md:left-auto md:right-auto w-full">
+            <div className="px-4 md:px-0 max-w-md md:max-w-lg lg:max-w-4xl xl:max-w-5xl 2xl:max-w-6xl mx-auto">
+              <button
+                type="submit"
+                disabled={isLoading || isLoadingCategories || categories.length === 0}
+                className="w-full py-4 px-4 rounded-xl text-center font-bold bg-primary text-white text-lg disabled:opacity-60 disabled:cursor-not-allowed hover:opacity-90 transition-opacity"
+              >
+                {isLoading ? 'Création...' : 'Créer l\'ingrédient'}
+              </button>
+            </div>
           </div>
         </form>
         </>
